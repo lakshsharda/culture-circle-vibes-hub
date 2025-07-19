@@ -61,7 +61,23 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// CultureCircle warm palette
+				warm: {
+					red: 'hsl(var(--red-warm))',
+					orange: 'hsl(var(--orange-warm))',
+					yellow: 'hsl(var(--yellow-warm))'
 				}
+			},
+			backgroundImage: {
+				'gradient-warm': 'var(--gradient-warm)',
+				'button-gradient': 'var(--button-gradient)'
+			},
+			boxShadow: {
+				'button-hover': 'var(--button-hover-shadow)'
+			},
+			transitionTimingFunction: {
+				'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
