@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Groups from "./pages/Groups";
 import Recommendations from "./pages/Recommendations";
 import NotFound from "./pages/NotFound";
 
@@ -61,6 +62,16 @@ const App = () => {
                 element={
                   isAuthenticated ? (
                     <Dashboard />
+                  ) : (
+                    <NotFound />
+                  )
+                } 
+              />
+              <Route 
+                path="/groups" 
+                element={
+                  isAuthenticated ? (
+                    <Groups />
                   ) : (
                     <NotFound />
                   )

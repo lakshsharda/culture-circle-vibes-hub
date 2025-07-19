@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { Send, RefreshCw, Save, Copy, Sparkles, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -258,22 +259,51 @@ const Recommendations = () => {
             </CardContent>
           </Card>
 
-          {/* Chat Interface */}
-          <Card className="bg-card shadow-lg flex-1">
+          {/* Enhanced Chat Interface */}
+          <Card className="bg-card shadow-xl border-0 overflow-hidden">
+            <div className="bg-gradient-to-r from-primary/10 via-warm-orange/10 to-warm-yellow/10 p-4 border-b">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="font-medium text-foreground">CultureCircle AI Assistant</span>
+                <Badge variant="secondary" className="text-xs">Online</Badge>
+              </div>
+            </div>
+            
             <CardContent className="p-0">
               {/* Messages Area */}
-              <ScrollArea className="h-96 p-6">
+              <ScrollArea className="h-[500px] p-6">
                 {messages.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-foreground mb-2">Start Your Planning Journey</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Ask me anything about planning experiences for your group!
+                  <div className="text-center py-16">
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-button-gradient rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <Sparkles className="h-10 w-10 text-white animate-pulse" />
+                      </div>
+                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-white"></div>
+                    </div>
+                    
+                    <h3 className="text-2xl font-bold text-foreground mb-3">Start Your Planning Journey</h3>
+                    <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
+                      I'm here to help you create amazing experiences with your cultural group!
                     </p>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>💡 Try: "Plan a 3-day Tokyo trip for my group"</p>
-                      <p>🎵 Or: "Create a playlist for our road trip"</p>
-                      <p>🍜 Or: "Suggest restaurants for our foodie night"</p>
+                    
+                    <div className="grid md:grid-cols-3 gap-4 text-sm max-w-3xl mx-auto">
+                      <Card className="bg-secondary/50 border-0 p-4 hover:bg-secondary/70 transition-colors cursor-pointer">
+                        <div className="text-2xl mb-2">🗾</div>
+                        <div className="font-medium text-foreground mb-1">Travel Planning</div>
+                        <div className="text-xs text-muted-foreground">"Plan a 3-day Tokyo trip for my group"</div>
+                      </Card>
+                      
+                      <Card className="bg-secondary/50 border-0 p-4 hover:bg-secondary/70 transition-colors cursor-pointer">
+                        <div className="text-2xl mb-2">🎵</div>
+                        <div className="font-medium text-foreground mb-1">Music & Playlists</div>
+                        <div className="text-xs text-muted-foreground">"Create a playlist for our road trip"</div>
+                      </Card>
+                      
+                      <Card className="bg-secondary/50 border-0 p-4 hover:bg-secondary/70 transition-colors cursor-pointer">
+                        <div className="text-2xl mb-2">🍜</div>
+                        <div className="font-medium text-foreground mb-1">Food & Dining</div>
+                        <div className="text-xs text-muted-foreground">"Suggest restaurants for our foodie night"</div>
+                      </Card>
                     </div>
                   </div>
                 ) : (
@@ -283,21 +313,40 @@ const Recommendations = () => {
                         key={message.id}
                         className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                        <div className={`max-w-[85%] rounded-2xl px-5 py-4 shadow-lg ${
                           message.type === 'user'
                             ? 'bg-button-gradient text-white'
-                            : 'bg-secondary text-secondary-foreground'
+                            : 'bg-white border border-border'
                         }`}>
-                          <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                          {message.type === 'assistant' && (
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-6 h-6 bg-button-gradient rounded-full flex items-center justify-center">
+                                <Sparkles className="h-3 w-3 text-white" />
+                              </div>
+                              <span className="text-xs font-medium text-primary">CultureCircle AI</span>
+                            </div>
+                          )}
+                          
+                          <div className={`whitespace-pre-wrap leading-relaxed ${
+                            message.type === 'user' ? 'text-white' : 'text-foreground'
+                          }`}>
                             {message.content}
                           </div>
-                          <div className={`text-xs mt-2 opacity-70 ${
+                          
+                          <div className={`text-xs mt-3 opacity-70 flex items-center gap-2 ${
                             message.type === 'user' ? 'text-white' : 'text-muted-foreground'
                           }`}>
-                            {message.timestamp.toLocaleTimeString([], { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
+                            <span>
+                              {message.timestamp.toLocaleTimeString([], { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </span>
+                            {message.type === 'assistant' && (
+                              <Badge variant="secondary" className="text-xs">
+                                AI Generated
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -305,14 +354,21 @@ const Recommendations = () => {
                     
                     {isGenerating && (
                       <div className="flex justify-start">
-                        <div className="bg-secondary text-secondary-foreground rounded-2xl px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex space-x-1">
-                              <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="bg-white border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[85%]">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-6 h-6 bg-button-gradient rounded-full flex items-center justify-center">
+                              <Sparkles className="h-3 w-3 text-white animate-pulse" />
                             </div>
-                            <span className="text-sm text-muted-foreground">Generating recommendations...</span>
+                            <span className="text-xs font-medium text-primary">CultureCircle AI</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            <div className="flex space-x-1">
+                              <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
+                              <div className="w-3 h-3 bg-warm-orange rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-3 h-3 bg-warm-yellow rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                            <span className="text-sm text-muted-foreground">Creating your perfect recommendations...</span>
                           </div>
                         </div>
                       </div>
@@ -322,30 +378,46 @@ const Recommendations = () => {
                 <div ref={messagesEndRef} />
               </ScrollArea>
 
-              {/* Input Area */}
-              <div className="border-t p-4">
-                <div className="flex gap-3">
-                  <Input
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="What do you want to plan? (e.g., A 3-day Tokyo trip for my group)"
-                    className="flex-1"
-                    disabled={!selectedGroup}
-                  />
+              {/* Enhanced Input Area */}
+              <div className="border-t bg-gradient-to-r from-secondary/30 to-accent/30 p-6">
+                <div className="flex gap-4">
+                  <div className="flex-1 relative">
+                    <Input
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="What amazing experience should we plan? ✨"
+                      className="flex-1 h-12 pl-4 pr-12 text-base bg-white/90 backdrop-blur-sm border-0 shadow-lg rounded-2xl focus:ring-2 focus:ring-primary/20"
+                      disabled={!selectedGroup}
+                    />
+                    {inputMessage && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                      </div>
+                    )}
+                  </div>
+                  
                   <Button
                     onClick={handleSendMessage}
                     variant="warm"
                     disabled={!inputMessage.trim() || !selectedGroup || isGenerating}
-                    className="flex-shrink-0"
+                    className="h-12 px-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                   >
-                    <Send className="h-4 w-4" />
+                    {isGenerating ? (
+                      <RefreshCw className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
                   </Button>
                 </div>
                 
-                {!selectedGroup && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Please select a group to start getting recommendations
+                {!selectedGroup ? (
+                  <p className="text-sm text-muted-foreground mt-3 text-center">
+                    ✨ Select a group above to unlock AI-powered recommendations
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-3 text-center">
+                    🎯 Press Enter or click send to get personalized recommendations for <span className="font-medium text-primary">{groups.find(g => g.id === selectedGroup)?.name}</span>
                   </p>
                 )}
               </div>
