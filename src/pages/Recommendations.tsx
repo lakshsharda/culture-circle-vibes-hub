@@ -189,48 +189,25 @@ const Recommendations = () => {
   const handleSendMessage = async (userPrompt: string) => {
     setQlooLoading(true);
     try {
-      const interests = aggregateInterests();
-      // Find the selected entity type config
-      const entityType = supportedEntityTypes.find(e => e.urn === selectedEntityType);
-      if (!entityType) throw new Error("Invalid entity type");
-      let entityIds: string[] = [];
-      let tagIds: string[] = [];
-      // Use /search for entity IDs
-      if (interests[entityType.key]) {
-        entityIds = await qlooSearchEntities(entityType.searchType, interests[entityType.key]);
-      }
-      // For cuisines, genres, etc., use /v2/tags (example for cuisines)
-      if (entityType.key === "cuisines" && interests.cuisines) {
-        for (const cuisine of interests.cuisines) {
-          const ids = await qlooSearchTags(cuisine);
-          tagIds.push(...ids);
-        }
-      }
-      if (entityIds.length === 0 && tagIds.length === 0) {
+      const res = await fetch('http://localhost:3000/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupId: selectedGroup, // or selectedGroupId if that's the actual group id
+          type: selectedEntityType === "urn:entity:artist" ? "music"
+              : selectedEntityType === "urn:entity:movie" ? "movie"
+              : selectedEntityType === "urn:entity:place" ? "restaurant"
+              : selectedEntityType === "urn:entity:destination" ? "travel"
+              : "music" // default fallback
+        })
+      });
+      if (!res.ok) {
         toast({ title: "No Data", description: "No valid interests found for this group and type." });
         setQlooLoading(false);
         return;
       }
-      // Build signals/filters for /v2/insights
-      const body: any = { filter: { type: selectedEntityType }, signal: {} };
-      if (entityIds.length > 0) body.signal.interests = { entities: entityIds };
-      if (tagIds.length > 0) body.signal.interests = { ...(body.signal.interests || {}), tags: tagIds };
-      // Call /v2/insights
-      const url = `${QLOO_BASE}/v2/insights`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "x-api-key": QLOO_API_KEY,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) throw new Error("Qloo insights error");
-      const qlooData = await res.json();
-      setQlooResult(qlooData);
-      // Compose context for Gemini
-      const context = `Group interests: ${JSON.stringify(interests)}\nQloo insights: ${JSON.stringify(qlooData)}`;
-      const geminiResponse = await callGemini(`${context}\nUser prompt: ${userPrompt}`);
+      const data = await res.json();
+      // Use data.gemini.summary, data.gemini.harmonyScore, etc. as needed
       // Add Gemini response to chat
       const userMessage: ChatMessage = {
         id: Date.now().toString(),
@@ -242,7 +219,7 @@ const Recommendations = () => {
       const aiResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: geminiResponse,
+        content: data.gemini.summary + "\n\nHarmony Score: " + data.gemini.harmonyScore + "\n" + data.gemini.reasoning,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, aiResponse]);
