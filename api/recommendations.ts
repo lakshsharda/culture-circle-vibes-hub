@@ -155,6 +155,7 @@ async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: 
 
 // Main handler for Vercel
 export default async function handler(req, res) {
+  console.log("QLOO_API_KEY:", process.env.QLOO_API_KEY);
   console.log("recommendations API invoked");
   const log: string[] = [];
   try {
