@@ -1,6 +1,8 @@
 import * as admin from 'firebase-admin';
 import axios from 'axios';
 
+console.log("[COLD START] recommendations API loaded");
+
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -155,8 +157,8 @@ async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: 
 
 // Main handler for Vercel
 export default async function handler(req, res) {
+  console.log("[HANDLER INVOKED] recommendations API");
   console.log("QLOO_API_KEY:", process.env.QLOO_API_KEY);
-  console.log("recommendations API invoked");
   const log: string[] = [];
   try {
     if (req.method !== 'POST') {
