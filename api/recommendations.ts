@@ -153,6 +153,7 @@ async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: 
   log.push(`Gemini response: summary='${summary}', harmonyScore=${harmonyScore}, reasoning='${reasoning}'`);
   return { summary, harmonyScore, reasoning };
 }
+//secret comment1
 //secret comment
 
 // Main handler for Vercel
