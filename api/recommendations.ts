@@ -1,4 +1,3 @@
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
 
@@ -153,8 +152,8 @@ async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: 
   return { summary, harmonyScore, reasoning };
 }
 
-// Main HTTPS function
-export default functions.https.onRequest(async (req, res) => {
+// Main handler for Vercel
+export default async function handler(req, res) {
   console.log("recommendations API invoked");
   const log: string[] = [];
   try {
@@ -214,12 +213,12 @@ export default functions.https.onRequest(async (req, res) => {
       debugLog: log,
     });
     return;
-  } catch (err: any) {
+  } catch (err) {
     log.push(`Error: ${err.message || err}`);
     res.status(500).json({ error: err.message || 'Internal server error', debugLog: log });
     return;
   }
-});
+}
 
 // ---
 // Sample JSON response:
