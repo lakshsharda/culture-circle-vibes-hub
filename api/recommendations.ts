@@ -15,7 +15,7 @@ const db = admin.firestore();
 
 // Qloo API config
 const QLOO_API_KEY = process.env.QLOO_API_KEY;
-const QLOO_BASE_URL = 'https://api.qloo.com/v2';
+const QLOO_BASE_URL = 'https://hackathon.api.qloo.com/v2';
 
 // Gemini API config
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
