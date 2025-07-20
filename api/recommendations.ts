@@ -154,7 +154,7 @@ async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: 
 }
 
 // Main HTTPS function
-export const recommendations = functions.https.onRequest(async (req, res) => {
+export default functions.https.onRequest(async (req, res) => {
   console.log("recommendations API invoked");
   const log: string[] = [];
   try {
