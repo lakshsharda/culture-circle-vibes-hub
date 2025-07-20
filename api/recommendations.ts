@@ -5,7 +5,10 @@ console.log("[COLD START] recommendations API loaded");
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
-  admin.initializeApp();
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
 }
 
 const db = admin.firestore();
