@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight, User, Music, MapPin, Target, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { auth, db } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 
 interface SignupProps {
   onSignup: (userData: any) => void;
@@ -40,7 +43,12 @@ const Signup = ({ onSignup }: SignupProps) => {
     vibeDescription: ""
   });
 
-  const [currentInput, setCurrentInput] = useState("");
+  const [musicArtistInput, setMusicArtistInput] = useState("");
+  const [movieInput, setMovieInput] = useState("");
+  const [bookInput, setBookInput] = useState("");
+  const [travelInput, setTravelInput] = useState("");
+  const [cuisineInput, setCuisineInput] = useState("");
+  const [tvShowInput, setTvShowInput] = useState("");
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -60,7 +68,13 @@ const Signup = ({ onSignup }: SignupProps) => {
         ...prev,
         [field]: [...(prev[field] as string[]), value.trim()]
       }));
-      setCurrentInput("");
+      // Clear input for the specific field
+      if (field === "musicArtists") setMusicArtistInput("");
+      if (field === "movies") setMovieInput("");
+      if (field === "books") setBookInput("");
+      if (field === "travelDestinations") setTravelInput("");
+      if (field === "cuisines") setCuisineInput("");
+      if (field === "tvShows") setTvShowInput("");
     }
   };
 
@@ -71,17 +85,39 @@ const Signup = ({ onSignup }: SignupProps) => {
     }));
   };
 
-  const handleSubmit = () => {
-    // TODO: Handle backend logic here
-    console.log("Signup data:", formData);
-    
-    toast({
-      title: "Welcome to CultureCircle! 🎉",
-      description: "Your profile has been created successfully."
-    });
-    
-    onSignup(formData);
-    navigate("/dashboard");
+  const handleSubmit = async () => {
+    try {
+      // Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+      const user = userCredential.user;
+
+      // Prepare user profile data (exclude password)
+      const profileData: Record<string, any> = { ...formData };
+      delete profileData.password;
+      profileData.uid = user.uid;
+      profileData.email = user.email.toLowerCase(); // Always store lowercase
+
+      // Store user profile in Firestore
+      await setDoc(doc(db, "users", user.uid), profileData);
+
+      toast({
+        title: "Welcome to CultureCircle! 🎉",
+        description: "Your profile has been created successfully."
+      });
+
+      onSignup(profileData);
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Signup Error",
+        description: error.message || "An error occurred during signup.",
+        variant: "destructive"
+      });
+    }
   };
 
   const stepIcons = [User, Music, MapPin, Target];
@@ -186,8 +222,8 @@ const Signup = ({ onSignup }: SignupProps) => {
                   items={formData.musicArtists}
                   onAdd={(value) => handleAddToArray("musicArtists", value)}
                   onRemove={(index) => handleRemoveFromArray("musicArtists", index)}
-                  currentInput={currentInput}
-                  setCurrentInput={setCurrentInput}
+                  currentInput={musicArtistInput}
+                  setCurrentInput={setMusicArtistInput}
                 />
                 
                 <MultiSelectInput
@@ -196,8 +232,8 @@ const Signup = ({ onSignup }: SignupProps) => {
                   items={formData.movies}
                   onAdd={(value) => handleAddToArray("movies", value)}
                   onRemove={(index) => handleRemoveFromArray("movies", index)}
-                  currentInput={currentInput}
-                  setCurrentInput={setCurrentInput}
+                  currentInput={movieInput}
+                  setCurrentInput={setMovieInput}
                 />
                 
                 <MultiSelectInput
@@ -206,8 +242,8 @@ const Signup = ({ onSignup }: SignupProps) => {
                   items={formData.books}
                   onAdd={(value) => handleAddToArray("books", value)}
                   onRemove={(index) => handleRemoveFromArray("books", index)}
-                  currentInput={currentInput}
-                  setCurrentInput={setCurrentInput}
+                  currentInput={bookInput}
+                  setCurrentInput={setBookInput}
                 />
               </div>
             )}
@@ -221,8 +257,8 @@ const Signup = ({ onSignup }: SignupProps) => {
                   items={formData.travelDestinations}
                   onAdd={(value) => handleAddToArray("travelDestinations", value)}
                   onRemove={(index) => handleRemoveFromArray("travelDestinations", index)}
-                  currentInput={currentInput}
-                  setCurrentInput={setCurrentInput}
+                  currentInput={travelInput}
+                  setCurrentInput={setTravelInput}
                 />
                 
                 <MultiSelectInput
@@ -231,8 +267,8 @@ const Signup = ({ onSignup }: SignupProps) => {
                   items={formData.cuisines}
                   onAdd={(value) => handleAddToArray("cuisines", value)}
                   onRemove={(index) => handleRemoveFromArray("cuisines", index)}
-                  currentInput={currentInput}
-                  setCurrentInput={setCurrentInput}
+                  currentInput={cuisineInput}
+                  setCurrentInput={setCuisineInput}
                 />
                 
                 <MultiSelectInput
@@ -241,8 +277,8 @@ const Signup = ({ onSignup }: SignupProps) => {
                   items={formData.tvShows}
                   onAdd={(value) => handleAddToArray("tvShows", value)}
                   onRemove={(index) => handleRemoveFromArray("tvShows", index)}
-                  currentInput={currentInput}
-                  setCurrentInput={setCurrentInput}
+                  currentInput={tvShowInput}
+                  setCurrentInput={setTvShowInput}
                 />
               </div>
             )}
@@ -339,16 +375,18 @@ const MultiSelectInput = ({
   onAdd, 
   onRemove, 
   currentInput, 
-  setCurrentInput 
+  setCurrentInput
 }: MultiSelectInputProps) => {
   return (
     <div>
       <Label>{label}</Label>
       <div className="space-y-2">
-        <div className="flex gap-2">
+        <div className="flex gap-2 relative">
           <Input
             value={currentInput}
-            onChange={(e) => setCurrentInput(e.target.value)}
+            onChange={(e) => {
+              setCurrentInput(e.target.value);
+            }}
             onKeyPress={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();

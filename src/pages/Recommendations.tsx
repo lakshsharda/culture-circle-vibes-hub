@@ -7,6 +7,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Send, RefreshCw, Save, Copy, Sparkles, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { callGemini } from "@/lib/gemini";
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
 
 interface ChatMessage {
   id: string;
@@ -21,13 +24,33 @@ const Recommendations = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [groupMembers, setGroupMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [qlooLoading, setQlooLoading] = useState(false);
+  const [qlooResult, setQlooResult] = useState<any>(null);
+
+  const supportedEntityTypes = [
+    { urn: "urn:entity:artist", label: "Music Artist", key: "musicArtists", searchType: "artist" },
+    { urn: "urn:entity:movie", label: "Movie", key: "movies", searchType: "movie" },
+    { urn: "urn:entity:book", label: "Book", key: "books", searchType: "book" },
+    { urn: "urn:entity:destination", label: "Destination", key: "travelDestinations", searchType: "destination" },
+    { urn: "urn:entity:tv_show", label: "TV Show", key: "tvShows", searchType: "tv_show" },
+    { urn: "urn:entity:brand", label: "Brand", key: "brands", searchType: "brand" },
+    { urn: "urn:entity:place", label: "Place", key: "places", searchType: "place" },
+    { urn: "urn:entity:person", label: "Person", key: "people", searchType: "person" },
+    { urn: "urn:entity:podcast", label: "Podcast", key: "podcasts", searchType: "podcast" },
+    { urn: "urn:entity:video_game", label: "Video Game", key: "videoGames", searchType: "video_game" },
+  ];
+  const [selectedEntityType, setSelectedEntityType] = useState(supportedEntityTypes[0].urn);
 
   // Mock groups data
-  const groups = [
-    { id: "1", name: "Tokyo Adventure Squad" },
-    { id: "2", name: "Indie Music Lovers" },
-    { id: "3", name: "Foodie Friends" }
-  ];
+  // const groups = [
+  //   { id: "1", name: "Tokyo Adventure Squad" },
+  //   { id: "2", name: "Indie Music Lovers" },
+  //   { id: "3", name: "Foodie Friends" }
+  // ];
 
   // Mock AI responses for different types of requests
   const mockResponses = {
@@ -54,98 +77,206 @@ const Recommendations = () => {
     ]
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Fetch user's groups
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const fetchGroups = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      const q = query(collection(db, "groups"), where("members", "array-contains", user.email));
+      const qsnap = await getDocs(q);
+      setGroups(qsnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+    fetchGroups();
+  }, []);
 
-  const generateResponse = (userMessage: string): string => {
-    const message = userMessage.toLowerCase();
-    
-    if (message.includes('trip') || message.includes('travel') || message.includes('tokyo') || message.includes('vacation')) {
-      return mockResponses.travel[Math.floor(Math.random() * mockResponses.travel.length)];
-    } else if (message.includes('music') || message.includes('playlist') || message.includes('song') || message.includes('concert')) {
-      return mockResponses.music[Math.floor(Math.random() * mockResponses.music.length)];
-    } else if (message.includes('food') || message.includes('restaurant') || message.includes('eat') || message.includes('dinner')) {
-      return mockResponses.food[Math.floor(Math.random() * mockResponses.food.length)];
-    } else {
-      return mockResponses.general[Math.floor(Math.random() * mockResponses.general.length)];
+  // Fetch group members' profiles when group is selected
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (!selectedGroupId) return;
+      setLoadingMembers(true);
+      const group = groups.find(g => g.id === selectedGroupId);
+      if (!group) return;
+      const memberEmails = group.members;
+      const memberProfiles: any[] = [];
+      for (const email of memberEmails) {
+        const q = query(collection(db, "users"), where("email", "==", email));
+        const qsnap = await getDocs(q);
+        if (!qsnap.empty) memberProfiles.push(qsnap.docs[0].data());
+      }
+      setGroupMembers(memberProfiles);
+      setLoadingMembers(false);
+    };
+    fetchMembers();
+  }, [selectedGroupId, groups]);
+
+  // Helper: Aggregate interests from all members
+  const aggregateInterests = () => {
+    const interests = {
+      musicArtists: [] as string[],
+      movies: [] as string[],
+      books: [] as string[],
+      travelDestinations: [] as string[],
+      cuisines: [] as string[],
+      tvShows: [] as string[],
+    };
+    for (const member of groupMembers) {
+      for (const key of Object.keys(interests)) {
+        if (Array.isArray(member[key])) {
+          interests[key as keyof typeof interests].push(...member[key]);
+        }
+      }
     }
+    // Remove duplicates
+    for (const key of Object.keys(interests)) {
+      interests[key as keyof typeof interests] = Array.from(new Set(interests[key as keyof typeof interests]));
+    }
+    return interests;
   };
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a message",
-        variant: "destructive"
-      });
-      return;
-    }
+  // Qloo API helpers
+  const QLOO_BASE = "https://hackathon.api.qloo.com";
+  const QLOO_API_KEY = import.meta.env.VITE_QLOO_API_KEY;
 
-    if (!selectedGroup) {
-      toast({
-        title: "Error", 
-        description: "Please select a group first",
-        variant: "destructive"
+  async function qlooSearchEntities(type: string, names: string[]): Promise<string[]> {
+    // type: 'artist', 'movie', etc.
+    const ids: string[] = [];
+    for (const name of names) {
+      const url = `${QLOO_BASE}/search?query=${encodeURIComponent(name)}`;
+      const res = await fetch(url, {
+        headers: { "x-api-key": QLOO_API_KEY }
       });
-      return;
+      if (res.ok) {
+        const data = await res.json();
+        // Find the first entity of the right type
+        const entity = (data.results || []).find((e: any) => e.type === type);
+        if (entity && entity.id) ids.push(entity.id);
+      }
     }
+    return ids;
+  }
 
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: inputMessage,
-      timestamp: new Date()
+  async function qlooGetInsights(entityTypeUrn: string, entityIds: string[]): Promise<any> {
+    // entityTypeUrn: e.g., 'urn:entity:artist', 'urn:entity:movie', etc.
+    const url = `${QLOO_BASE}/v2/insights`;
+    const body = {
+      filter: { type: entityTypeUrn },
+      signal: { interests: { entities: entityIds } }
     };
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "x-api-key": QLOO_API_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error("Qloo insights error");
+    return await res.json();
+  }
 
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage("");
-    setIsGenerating(true);
+  // Helper: Qloo /v2/tags for cuisines, genres, etc.
+  async function qlooSearchTags(queryStr: string): Promise<string[]> {
+    const url = `${QLOO_BASE}/v2/tags?query=${encodeURIComponent(queryStr)}`;
+    const res = await fetch(url, {
+      headers: { "x-api-key": QLOO_API_KEY }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results || []).map((tag: any) => tag.id);
+  }
 
-    // TODO: Handle backend API logic here
-    console.log("Generating recommendation for:", inputMessage, "Group:", selectedGroup);
-
-    // Simulate AI response delay
-    setTimeout(() => {
+  // Refactored handleSendMessage
+  const handleSendMessage = async (userPrompt: string) => {
+    setQlooLoading(true);
+    try {
+      const interests = aggregateInterests();
+      // Find the selected entity type config
+      const entityType = supportedEntityTypes.find(e => e.urn === selectedEntityType);
+      if (!entityType) throw new Error("Invalid entity type");
+      let entityIds: string[] = [];
+      let tagIds: string[] = [];
+      // Use /search for entity IDs
+      if (interests[entityType.key]) {
+        entityIds = await qlooSearchEntities(entityType.searchType, interests[entityType.key]);
+      }
+      // For cuisines, genres, etc., use /v2/tags (example for cuisines)
+      if (entityType.key === "cuisines" && interests.cuisines) {
+        for (const cuisine of interests.cuisines) {
+          const ids = await qlooSearchTags(cuisine);
+          tagIds.push(...ids);
+        }
+      }
+      if (entityIds.length === 0 && tagIds.length === 0) {
+        toast({ title: "No Data", description: "No valid interests found for this group and type." });
+        setQlooLoading(false);
+        return;
+      }
+      // Build signals/filters for /v2/insights
+      const body: any = { filter: { type: selectedEntityType }, signal: {} };
+      if (entityIds.length > 0) body.signal.interests = { entities: entityIds };
+      if (tagIds.length > 0) body.signal.interests = { ...(body.signal.interests || {}), tags: tagIds };
+      // Call /v2/insights
+      const url = `${QLOO_BASE}/v2/insights`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "x-api-key": QLOO_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error("Qloo insights error");
+      const qlooData = await res.json();
+      setQlooResult(qlooData);
+      // Compose context for Gemini
+      const context = `Group interests: ${JSON.stringify(interests)}\nQloo insights: ${JSON.stringify(qlooData)}`;
+      const geminiResponse = await callGemini(`${context}\nUser prompt: ${userPrompt}`);
+      // Add Gemini response to chat
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: userPrompt,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, userMessage]);
       const aiResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: generateResponse(inputMessage),
+        content: geminiResponse,
         timestamp: new Date()
       };
-
       setMessages(prev => [...prev, aiResponse]);
-      setIsGenerating(false);
-    }, 1500);
+    } catch (e) {
+      toast({ title: "AI Error", description: "Failed to get recommendation.", variant: "destructive" });
+    } finally {
+      setQlooLoading(false);
+    }
   };
 
-  const handleGenerateAgain = () => {
+  const handleGenerateAgain = async () => {
     if (messages.length === 0) return;
-
     const lastUserMessage = [...messages].reverse().find(msg => msg.type === 'user');
     if (!lastUserMessage) return;
-
     setIsGenerating(true);
-
-    // TODO: Handle backend regeneration logic here
-    console.log("Regenerating response for:", lastUserMessage.content);
-
-    setTimeout(() => {
+    try {
+      const prompt = `Group: ${groups.find(g => g.id === selectedGroup)?.name || ''}\nUser: ${lastUserMessage.content}`;
+      const aiText = await callGemini(prompt);
       const newResponse: ChatMessage = {
         id: Date.now().toString(),
         type: 'assistant',
-        content: generateResponse(lastUserMessage.content),
+        content: aiText,
         timestamp: new Date()
       };
-
       setMessages(prev => [...prev, newResponse]);
+    } catch (error: any) {
+      toast({
+        title: "AI Error",
+        description: error.message || "Failed to regenerate recommendation.",
+        variant: "destructive"
+      });
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
   };
 
   const handleSavePlan = () => {
@@ -183,7 +314,7 @@ const Recommendations = () => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      handleSendMessage(inputMessage);
     }
   };
 
@@ -380,6 +511,20 @@ const Recommendations = () => {
 
               {/* Enhanced Input Area */}
               <div className="border-t bg-gradient-to-r from-secondary/30 to-accent/30 p-6">
+                <div className="flex gap-4 mb-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">Select Recommendation Type</label>
+                    <select
+                      className="w-full border rounded px-3 py-2"
+                      value={selectedEntityType}
+                      onChange={e => setSelectedEntityType(e.target.value)}
+                    >
+                      {supportedEntityTypes.map((type) => (
+                        <option key={type.urn} value={type.urn}>{type.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <div className="flex gap-4">
                   <div className="flex-1 relative">
                     <Input
@@ -398,12 +543,12 @@ const Recommendations = () => {
                   </div>
                   
                   <Button
-                    onClick={handleSendMessage}
+                    onClick={() => handleSendMessage(inputMessage)}
                     variant="warm"
-                    disabled={!inputMessage.trim() || !selectedGroup || isGenerating}
+                    disabled={!inputMessage.trim() || !selectedGroup || isGenerating || qlooLoading}
                     className="h-12 px-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                   >
-                    {isGenerating ? (
+                    {isGenerating || qlooLoading ? (
                       <RefreshCw className="h-5 w-5 animate-spin" />
                     ) : (
                       <Send className="h-5 w-5" />

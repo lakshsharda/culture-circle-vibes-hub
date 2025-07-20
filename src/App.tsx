@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Groups from "./pages/Groups";
 import Recommendations from "./pages/Recommendations";
 import NotFound from "./pages/NotFound";
+import EditProfile from "./pages/EditProfile";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,16 @@ const App = () => {
                 element={
                   isAuthenticated ? (
                     <Recommendations />
+                  ) : (
+                    <NotFound />
+                  )
+                } 
+              />
+              <Route 
+                path="/edit-profile" 
+                element={
+                  isAuthenticated ? (
+                    <EditProfile />
                   ) : (
                     <NotFound />
                   )

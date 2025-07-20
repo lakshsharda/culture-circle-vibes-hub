@@ -16,14 +16,14 @@ const Navbar = ({ isAuthenticated, onLogout }: NavbarProps) => {
 
   const navItems = [
     { name: "Home", path: "/", public: true },
-    { name: "Signup", path: "/signup", public: true },
-    { name: "Login", path: "/login", public: true },
+    { name: "Signup", path: "/signup", public: true, hideWhenAuth: true },
+    { name: "Login", path: "/login", public: true, hideWhenAuth: true },
     { name: "Dashboard", path: "/dashboard", public: false },
     { name: "Recommendations", path: "/recommendations", public: false },
   ];
 
-  const visibleItems = navItems.filter(item => 
-    item.public || isAuthenticated
+  const visibleItems = navItems.filter(item =>
+    (item.public || isAuthenticated) && !(isAuthenticated && item.hideWhenAuth)
   );
 
   return (
