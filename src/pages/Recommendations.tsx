@@ -189,7 +189,7 @@ const Recommendations = () => {
   const handleSendMessage = async (userPrompt: string) => {
     setQlooLoading(true);
     try {
-      const res = await fetch('https://culture-circle-vibes-hub.vercel.app/api/recommendations', {
+      const res = await fetch('http://localhost:3000/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
