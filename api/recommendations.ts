@@ -151,6 +151,7 @@ async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: 
   log.push(`Gemini response: summary='${summary}', harmonyScore=${harmonyScore}, reasoning='${reasoning}'`);
   return { summary, harmonyScore, reasoning };
 }
+//secret comment
 
 // Main handler for Vercel
 export default async function handler(req, res) {
