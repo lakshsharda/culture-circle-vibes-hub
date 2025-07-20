@@ -1,3 +1,10 @@
+process.on('uncaughtException', function (err) {
+  console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', function (reason, promise) {
+  console.error('Unhandled Rejection:', reason);
+});
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
@@ -15,7 +22,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 const QLOO_API_KEY = process.env.QLOO_API_KEY;
-const QLOO_BASE_URL = 'https://api.qloo.com/v2';
+const QLOO_BASE_URL = 'https://hackathon.api.qloo.com/v2'; // Use hackathon endpoint
 const GEMINI_API_KEY = process.env.VITE_GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 
@@ -46,11 +53,13 @@ async function getGroupMemberEmails(groupId: string): Promise<string[]> {
   const data = groupSnap.data();
   console.log('groupSnap.data():', data);
   if (!groupSnap.exists || !data) throw new Error('Group not found');
+  console.log('Type of data.members:', typeof data.members, 'Is array:', Array.isArray(data.members), 'Value:', data.members);
   if (!data.members || !Array.isArray(data.members)) {
     console.log('data.members is not an array:', data.members);
     throw new Error('Group has no members');
   }
-  if (data.members.length === 0) {
+  console.log('About to check data.members.length:', data.members);
+  if ((data.members?.length ?? 0) === 0) {
     console.log('data.members is empty array');
     throw new Error('Group has no members');
   }
@@ -74,16 +83,36 @@ function aggregateInterests(users: UserInterests[], type: string): string[] {
   for (const user of users) {
     switch (type) {
       case 'music':
-        user.musicArtists?.forEach((a) => interests.add(a));
+        if (user.musicArtists) {
+          console.log('About to check user.musicArtists.length:', user.musicArtists);
+          if (user.musicArtists.length > 0) {
+            user.musicArtists.forEach((a) => interests.add(a));
+          }
+        }
         break;
       case 'movie':
-        user.movies?.forEach((m) => interests.add(m));
+        if (user.movies) {
+          console.log('About to check user.movies.length:', user.movies);
+          if (user.movies.length > 0) {
+            user.movies.forEach((m) => interests.add(m));
+          }
+        }
         break;
       case 'restaurant':
-        user.cuisines?.forEach((c) => interests.add(c));
+        if (user.cuisines) {
+          console.log('About to check user.cuisines.length:', user.cuisines);
+          if (user.cuisines.length > 0) {
+            user.cuisines.forEach((c) => interests.add(c));
+          }
+        }
         break;
       case 'travel':
-        user.travelDestinations?.forEach((d) => interests.add(d));
+        if (user.travelDestinations) {
+          console.log('About to check user.travelDestinations.length:', user.travelDestinations);
+          if (user.travelDestinations.length > 0) {
+            user.travelDestinations.forEach((d) => interests.add(d));
+          }
+        }
         break;
       default:
         break;
@@ -99,12 +128,17 @@ async function resolveTags(interests: string[]): Promise<string[]> {
   for (const interest of interests) {
     try {
       console.log('Qloo tag search for:', interest);
+      console.log('About to check interest.length:', interest);
+      if (typeof interest === 'string' && interest.length === 0) {
+        console.log('Interest is empty string, skipping');
+        continue;
+      }
       const resp = await axios.get(`${QLOO_BASE_URL}/tags`, {
         params: { q: interest },
         headers: { 'x-api-key': QLOO_API_KEY },
       });
       console.log('Qloo tag response:', resp.data);
-      if (resp.data && Array.isArray(resp.data.tags) && resp.data.tags.length > 0) {
+      if (resp.data && Array.isArray(resp.data.tags) && (resp.data.tags?.length ?? 0) > 0) {
         tagUrns.push(resp.data.tags[0].urn);
         console.log(`Resolved interest '${interest}' to tag URN: ${resp.data.tags[0].urn}`);
       } else {
