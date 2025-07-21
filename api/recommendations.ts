@@ -5,10 +5,25 @@ console.log("[COLD START] recommendations API loaded");
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  try {
+    let serviceAccount;
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+      // Try base64 encoded service account first
+      serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString());
+    } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      // Fallback to regular JSON string
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } else {
+      throw new Error('Firebase service account credentials not found in environment variables');
+    }
+    
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } catch (error) {
+    console.error('Failed to initialize Firebase:', error);
+    throw error;
+  }
 }
 
 const db = admin.firestore();
