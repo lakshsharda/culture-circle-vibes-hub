@@ -153,6 +153,8 @@ async function resolveEntities(interests: string[], type: string, log: string[])
         headers: { 'x-api-key': QLOO_API_KEY },
       });
 
+      log.push(`Qloo search response for '${interest}': ${JSON.stringify(resp.data)}`);
+
       if (resp.data && Array.isArray(resp.data.results) && resp.data.results.length > 0) {
         const entity = resp.data.results.find((e: any) => e.type === qlooSearchType);
         if (entity && entity.id) {
