@@ -156,12 +156,12 @@ async function resolveEntities(interests: string[], type: string, log: string[])
       log.push(`Qloo search response for '${interest}': ${JSON.stringify(resp.data)}`);
 
       if (resp.data && Array.isArray(resp.data.results) && resp.data.results.length > 0) {
-        const entity = resp.data.results.find((e: any) => e.type === qlooSearchType);
+        const entity = resp.data.results[0]; // Take the first, most relevant result
         if (entity && entity.id) {
           entityIds.push(entity.id);
-          log.push(`Resolved interest '${interest}' to entity ID: ${entity.id}`);
+          log.push(`Resolved interest '${interest}' to entity ID: ${entity.id} (type: ${entity.type})`);
         } else {
-          log.push(`No entity of type '${qlooSearchType}' found for interest: '${interest}'`);
+          log.push(`First search result for '${interest}' had no ID.`);
         }
       } else {
         log.push(`No search results for interest: '${interest}'`);
