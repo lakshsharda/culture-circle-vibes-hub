@@ -133,18 +133,6 @@ function aggregateInterests(users: UserInterests[], type: string, log: string[])
 // Helper: Resolve interest names to Qloo entity IDs
 async function resolveEntities(interests: string[], type: string, log: string[]): Promise<string[]> {
   const entityIds: string[] = [];
-  const searchTypeMap: Record<string, string> = {
-    music: 'artist',
-    movie: 'movie',
-    restaurant: 'place',
-    travel: 'destination',
-  };
-  const qlooSearchType = searchTypeMap[type];
-  if (!qlooSearchType) {
-    log.push(`No Qloo search type mapping for recommendation type: '${type}'`);
-    return [];
-  }
-
   for (const interest of interests) {
     try {
       const searchUrl = `https://hackathon.api.qloo.com/search`;
@@ -153,36 +141,41 @@ async function resolveEntities(interests: string[], type: string, log: string[])
         headers: { 'x-api-key': QLOO_API_KEY },
       });
 
-      log.push(`Qloo search response for '${interest}' (type: ${qlooSearchType}): ${JSON.stringify(resp.data)}`);
-      log.push(`All Qloo results for '${interest}': ${JSON.stringify(resp.data.results)}`);
+      log.push(`RAW QLOO RESPONSE for '${interest}': ${JSON.stringify(resp.data)}`);
 
       if (resp.data && Array.isArray(resp.data.results) && resp.data.results.length > 0) {
-        // Find the first result that has a valid ID, checking multiple possible locations.
-        let foundEntity = null;
+        let foundId = null;
         for (const result of resp.data.results) {
+          log.push(`INSPECTING RESULT for '${interest}': ${JSON.stringify(result)}`);
+          if (result && result.entity_id) {
+            foundId = result.entity_id;
+            log.push(`FOUND ID for '${interest}' in result.entity_id`);
+            break;
+          }
           if (result && result.qloo && result.qloo.id) {
-            foundEntity = result;
+            foundId = result.qloo.id;
+            log.push(`FOUND ID for '${interest}' in result.qloo.id`);
             break;
           }
           if (result && result.id) {
-            // Fallback for top-level ID
-            foundEntity = { ...result, qloo: { id: result.id } };
+            foundId = result.id;
+            log.push(`FOUND ID for '${interest}' in result.id`);
             break;
           }
         }
 
-        if (foundEntity) {
-          entityIds.push(foundEntity.qloo.id);
-          log.push(`Resolved interest '${interest}' to entity ID: ${foundEntity.qloo.id} (type: ${foundEntity.type})`);
+        if (foundId) {
+          entityIds.push(foundId);
+          log.push(`SUCCESS: Resolved '${interest}' to ID: ${foundId}`);
         } else {
-          log.push(`Could not find a result with a valid Qloo ID for interest: '${interest}'`);
+          log.push(`FAILURE: No valid ID found for '${interest}' in any results.`);
         }
       } else {
-        log.push(`No search results for interest: '${interest}'`);
+        log.push(`No search results array for interest: '${interest}'`);
       }
     } catch (err) {
       const errorMessage = err.response ? JSON.stringify(err.response.data) : err.message;
-      log.push(`Error resolving entity for interest '${interest}': ${errorMessage}`);
+      log.push(`AXIOS ERROR for interest '${interest}': ${errorMessage}`);
     }
   }
   return entityIds;
