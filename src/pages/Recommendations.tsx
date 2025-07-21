@@ -189,7 +189,7 @@ const Recommendations = () => {
   const handleSendMessage = async (userPrompt: string) => {
     setQlooLoading(true);
     try {
-      const res = await fetch('http://localhost:3000/api/recommend', {
+      const res = await fetch('/api/recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
