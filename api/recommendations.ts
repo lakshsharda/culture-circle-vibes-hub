@@ -153,15 +153,29 @@ async function resolveEntities(interests: string[], type: string, log: string[])
         headers: { 'x-api-key': QLOO_API_KEY },
       });
 
-      log.push(`Qloo search response for '${interest}': ${JSON.stringify(resp.data)}`);
+      log.push(`Qloo search response for '${interest}' (type: ${qlooSearchType}): ${JSON.stringify(resp.data)}`);
+      log.push(`All Qloo results for '${interest}': ${JSON.stringify(resp.data.results)}`);
 
       if (resp.data && Array.isArray(resp.data.results) && resp.data.results.length > 0) {
-        const entity = resp.data.results[0]; // Take the first, most relevant result
-        if (entity && entity.id) {
-          entityIds.push(entity.id);
-          log.push(`Resolved interest '${interest}' to entity ID: ${entity.id} (type: ${entity.type})`);
+        // Find the first result that has a valid ID, checking multiple possible locations.
+        let foundEntity = null;
+        for (const result of resp.data.results) {
+          if (result && result.qloo && result.qloo.id) {
+            foundEntity = result;
+            break;
+          }
+          if (result && result.id) {
+            // Fallback for top-level ID
+            foundEntity = { ...result, qloo: { id: result.id } };
+            break;
+          }
+        }
+
+        if (foundEntity) {
+          entityIds.push(foundEntity.qloo.id);
+          log.push(`Resolved interest '${interest}' to entity ID: ${foundEntity.qloo.id} (type: ${foundEntity.type})`);
         } else {
-          log.push(`First search result for '${interest}' had no ID.`);
+          log.push(`Could not find a result with a valid Qloo ID for interest: '${interest}'`);
         }
       } else {
         log.push(`No search results for interest: '${interest}'`);
