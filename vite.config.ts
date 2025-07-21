@@ -8,10 +8,11 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     proxy: {
+      // For local development, proxy API requests to the local Vercel dev server
       '/api': {
-        target: 'https://culture-circle-vibes-hub.vercel.app',
+        target: 'http://localhost:3000',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       }
     }
   },
