@@ -45,7 +45,7 @@ const QLOO_BASE_URL = 'https://hackathon.api.qloo.com/v2';
 
 // Gemini API config
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_URL = process.env.GEMINI_DEFAULT_MODEL || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 
 // Recommendation type to Qloo entity mapping
 const RECOMMENDATION_TYPE_TO_ENTITY: Record<string, string> = {
