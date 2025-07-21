@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import admin from 'firebase-admin';
 import axios from 'axios';
 
 console.log("[COLD START] recommendations API loaded");
