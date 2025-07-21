@@ -183,16 +183,17 @@ async function resolveEntities(interests: string[], type: string, log: string[])
 
 // Helper: Get Qloo recommendations
 async function getQlooRecommendations(entityType: string, entityIds: string[], log: string[]): Promise<any[]> {
-  const body = {
-    filter: { type: entityType },
-    signal: { interests: { entities: entityIds } },
+  const params = {
+    'filter.type': entityType,
+    'signal.interests.entities': entityIds.join(','),
     take: 5,
   };
   try {
-    const resp = await axios.post(`${QLOO_BASE_URL}/insights`, body, {
-      headers: { 'x-api-key': QLOO_API_KEY, 'Content-Type': 'application/json' },
+    const resp = await axios.get(`${QLOO_BASE_URL}/insights`, {
+      params,
+      headers: { 'x-api-key': QLOO_API_KEY },
     });
-    log.push(`Qloo insights call body: ${JSON.stringify(body)}`);
+    log.push(`Qloo insights call params: ${JSON.stringify(params)}`);
     log.push(`Qloo insights response: ${JSON.stringify(resp.data?.data || [])}`);
     return resp.data?.data || [];
   } catch (err) {
