@@ -9,9 +9,19 @@ if (!admin.apps.length) {
     let serviceAccount;
     if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
       // Try base64 encoded service account first
-      serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString());
+      const base64Str = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+      console.log("Found base64 service account, length:", base64Str.length);
+      try {
+        const decoded = Buffer.from(base64Str, 'base64').toString();
+        serviceAccount = JSON.parse(decoded);
+        console.log("Successfully decoded and parsed service account");
+      } catch (decodeError) {
+        console.error("Failed to decode/parse base64 service account:", decodeError);
+        throw decodeError;
+      }
     } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       // Fallback to regular JSON string
+      console.log("Using fallback FIREBASE_SERVICE_ACCOUNT");
       serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     } else {
       throw new Error('Firebase service account credentials not found in environment variables');
@@ -20,6 +30,7 @@ if (!admin.apps.length) {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
+    console.log("Firebase Admin initialized successfully");
   } catch (error) {
     console.error('Failed to initialize Firebase:', error);
     throw error;
@@ -45,15 +56,15 @@ const RECOMMENDATION_TYPE_TO_ENTITY: Record<string, string> = {
 };
 
 // Helper: Fetch group member IDs from Firestore
-type GroupDoc = { memberIds: string[] };
+type GroupDoc = { members: string[] };
 async function getGroupMemberIds(groupId: string): Promise<string[]> {
   const groupSnap = await db.collection('groups').doc(groupId).get();
   if (!groupSnap.exists) throw new Error('Group not found');
   const data = groupSnap.data() as GroupDoc;
-  if (!data.memberIds || !Array.isArray(data.memberIds) || data.memberIds.length === 0) {
+  if (!data.members || !Array.isArray(data.members) || data.members.length === 0) {
     throw new Error('Group has no members');
   }
-  return data.memberIds;
+  return data.members;
 }
 
 // Helper: Fetch user interests from Firestore
@@ -177,7 +188,9 @@ async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: 
 // Main handler for Vercel
 export default async function handler(req, res) {
   console.log("[HANDLER INVOKED] recommendations API");
-  console.log("QLOO_API_KEY:", process.env.QLOO_API_KEY);
+  console.log("QLOO_API_KEY:", process.env.QLOO_API_KEY ? "Present" : "Missing");
+  console.log("GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? "Present" : "Missing");
+  console.log("Request body:", JSON.stringify(req.body));
   const log: string[] = [];
   try {
     if (req.method !== 'POST') {
@@ -195,47 +208,54 @@ export default async function handler(req, res) {
       return;
     }
     // 1. Fetch group members
-    const memberIds = await getGroupMemberIds(groupId);
-    // 2. Fetch user interests
-    const users: UserInterests[] = [];
-    for (const userId of memberIds) {
-      try {
-        users.push(await getUserInterests(userId));
-      } catch (err) {
-        log.push(`User not found or error for userId: ${userId}`);
+    try {
+      const memberIds = await getGroupMemberIds(groupId);
+      console.log("Found memberIds:", memberIds);
+      // 2. Fetch user interests
+      const users: UserInterests[] = [];
+      for (const userId of memberIds) {
+        try {
+          users.push(await getUserInterests(userId));
+        } catch (err) {
+          log.push(`User not found or error for userId: ${userId}`);
+        }
       }
-    }
-    if (users.length === 0) {
-      res.status(404).json({ error: 'No valid users found in group.' });
+      if (users.length === 0) {
+        res.status(404).json({ error: 'No valid users found in group.' });
+        return;
+      }
+      // 3. Aggregate interests
+      const interests = aggregateInterests(users, type);
+      if (interests.length === 0) {
+        res.status(404).json({ error: 'No interests found for group.' });
+        return;
+      }
+      // 4. Resolve tags
+      const tagUrns = await resolveTags(interests, log);
+      if (tagUrns.length === 0) {
+        res.status(404).json({ error: 'No Qloo tags found for interests.' });
+        return;
+      }
+      // 5. Qloo recommendations
+      const qlooRecs = await getQlooRecommendations(entityType, tagUrns, log);
+      // 6. Gemini response
+      const gemini = await getGeminiResponse(users, qlooRecs, type, log);
+      // 7. Return JSON
+      res.json({
+        groupId,
+        type,
+        interests,
+        tagUrns,
+        qlooRecommendations: qlooRecs,
+        gemini,
+        debugLog: log,
+      });
+      return;
+    } catch (err) {
+      log.push(`Error fetching group members: ${err.message || err}`);
+      res.status(500).json({ error: err.message || 'Internal server error', debugLog: log });
       return;
     }
-    // 3. Aggregate interests
-    const interests = aggregateInterests(users, type);
-    if (interests.length === 0) {
-      res.status(404).json({ error: 'No interests found for group.' });
-      return;
-    }
-    // 4. Resolve tags
-    const tagUrns = await resolveTags(interests, log);
-    if (tagUrns.length === 0) {
-      res.status(404).json({ error: 'No Qloo tags found for interests.' });
-      return;
-    }
-    // 5. Qloo recommendations
-    const qlooRecs = await getQlooRecommendations(entityType, tagUrns, log);
-    // 6. Gemini response
-    const gemini = await getGeminiResponse(users, qlooRecs, type, log);
-    // 7. Return JSON
-    res.json({
-      groupId,
-      type,
-      interests,
-      tagUrns,
-      qlooRecommendations: qlooRecs,
-      gemini,
-      debugLog: log,
-    });
-    return;
   } catch (err) {
     log.push(`Error: ${err.message || err}`);
     res.status(500).json({ error: err.message || 'Internal server error', debugLog: log });
