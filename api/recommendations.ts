@@ -69,11 +69,12 @@ async function getGroupMemberIds(groupId: string): Promise<string[]> {
 
 // Helper: Fetch user interests from Firestore
 interface UserInterests {
-  musicGenres?: string[];
-  favoriteArtists?: string[];
-  favoriteBooks?: string[];
-  favoriteCuisines?: string[];
-  favoriteDestinations?: string[];
+  musicArtists?: string[];
+  movies?: string[];
+  books?: string[];
+  cuisines?: string[];
+  travelDestinations?: string[];
+  tvShows?: string[];
 }
 async function getUserInterests(userEmail: string): Promise<UserInterests> {
   const usersRef = db.collection('users');
@@ -92,17 +93,16 @@ function aggregateInterests(users: UserInterests[], type: string, log: string[])
   for (const user of users) {
     switch (type) {
       case 'music':
-        user.musicGenres?.forEach((g) => interests.add(g));
-        user.favoriteArtists?.forEach((a) => interests.add(a));
+        user.musicArtists?.forEach((a) => interests.add(a));
         break;
       case 'movie':
-        user.favoriteBooks?.forEach((b) => interests.add(b)); // fallback if needed
+        user.movies?.forEach((m) => interests.add(m));
         break;
       case 'restaurant':
-        user.favoriteCuisines?.forEach((c) => interests.add(c));
+        user.cuisines?.forEach((c) => interests.add(c));
         break;
       case 'travel':
-        user.favoriteDestinations?.forEach((d) => interests.add(d));
+        user.travelDestinations?.forEach((d) => interests.add(d));
         break;
       default:
         break;
