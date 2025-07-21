@@ -75,14 +75,19 @@ interface UserInterests {
   favoriteCuisines?: string[];
   favoriteDestinations?: string[];
 }
-async function getUserInterests(userId: string): Promise<UserInterests> {
-  const userSnap = await db.collection('users').doc(userId).get();
-  if (!userSnap.exists) throw new Error(`User ${userId} not found`);
-  return userSnap.data() as UserInterests;
+async function getUserInterests(userEmail: string): Promise<UserInterests> {
+  const usersRef = db.collection('users');
+  const q = usersRef.where('email', '==', userEmail).limit(1);
+  const userSnap = await q.get();
+
+  if (userSnap.empty) {
+    throw new Error(`User with email ${userEmail} not found`);
+  }
+  return userSnap.docs[0].data() as UserInterests;
 }
 
 // Helper: Aggregate interests by type
-function aggregateInterests(users: UserInterests[], type: string): string[] {
+function aggregateInterests(users: UserInterests[], type: string, log: string[]): string[] {
   const interests = new Set<string>();
   for (const user of users) {
     switch (type) {
@@ -103,7 +108,26 @@ function aggregateInterests(users: UserInterests[], type: string): string[] {
         break;
     }
   }
-  return Array.from(interests).filter(Boolean);
+  const finalInterests = Array.from(interests).filter(Boolean);
+
+  // If no interests are found, provide a default set based on type
+  if (finalInterests.length === 0) {
+    log.push("No specific interests found, using defaults.");
+    switch (type) {
+      case 'music':
+        return ['pop', 'rock', 'electronic']; // Default music genres
+      case 'movie':
+        return ['action', 'comedy']; // Default movie genres
+      case 'restaurant':
+        return ['italian', 'mexican']; // Default cuisines
+      case 'travel':
+        return ['beach', 'city break']; // Default travel types
+      default:
+        return [];
+    }
+  }
+
+  return finalInterests;
 }
 
 // Helper: Resolve interests to Qloo tag URNs
@@ -213,11 +237,11 @@ export default async function handler(req, res) {
       console.log("Found memberIds:", memberIds);
       // 2. Fetch user interests
       const users: UserInterests[] = [];
-      for (const userId of memberIds) {
+      for (const userEmail of memberIds) {
         try {
-          users.push(await getUserInterests(userId));
+          users.push(await getUserInterests(userEmail));
         } catch (err) {
-          log.push(`User not found or error for userId: ${userId}`);
+          log.push(`User not found or error for userEmail: ${userEmail}`);
         }
       }
       if (users.length === 0) {
@@ -225,7 +249,7 @@ export default async function handler(req, res) {
         return;
       }
       // 3. Aggregate interests
-      const interests = aggregateInterests(users, type);
+      const interests = aggregateInterests(users, type, log);
       if (interests.length === 0) {
         res.status(404).json({ error: 'No interests found for group.' });
         return;

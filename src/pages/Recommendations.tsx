@@ -202,7 +202,9 @@ const Recommendations = () => {
         })
       });
       if (!res.ok) {
-        toast({ title: "No Data", description: "No valid interests found for this group and type." });
+        const errorData = await res.json().catch(() => ({ error: "Failed to parse error response" }));
+        console.error("API Error:", errorData);
+        toast({ title: "API Error", description: errorData.error || "An unknown error occurred.", variant: "destructive" });
         setQlooLoading(false);
         return;
       }
