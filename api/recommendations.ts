@@ -130,45 +130,65 @@ function aggregateInterests(users: UserInterests[], type: string, log: string[])
   return finalInterests;
 }
 
-// Helper: Resolve interests to Qloo tag URNs
-async function resolveTags(interests: string[], log: string[]): Promise<string[]> {
-  const tagUrns: string[] = [];
+// Helper: Resolve interest names to Qloo entity IDs
+async function resolveEntities(interests: string[], type: string, log: string[]): Promise<string[]> {
+  const entityIds: string[] = [];
+  const searchTypeMap: Record<string, string> = {
+    music: 'artist',
+    movie: 'movie',
+    restaurant: 'place',
+    travel: 'destination',
+  };
+  const qlooSearchType = searchTypeMap[type];
+  if (!qlooSearchType) {
+    log.push(`No Qloo search type mapping for recommendation type: '${type}'`);
+    return [];
+  }
+
   for (const interest of interests) {
     try {
-      const resp = await axios.get(`${QLOO_BASE_URL}/tags`, {
-        params: { q: interest },
+      const searchUrl = `https://hackathon.api.qloo.com/search`;
+      const resp = await axios.get(searchUrl, {
+        params: { query: interest },
         headers: { 'x-api-key': QLOO_API_KEY },
       });
-      if (resp.data && Array.isArray(resp.data.tags) && resp.data.tags.length > 0) {
-        tagUrns.push(resp.data.tags[0].urn); // Take the first matching tag
-        log.push(`Resolved interest '${interest}' to tag URN: ${resp.data.tags[0].urn}`);
+
+      if (resp.data && Array.isArray(resp.data.results) && resp.data.results.length > 0) {
+        const entity = resp.data.results.find((e: any) => e.type === qlooSearchType);
+        if (entity && entity.id) {
+          entityIds.push(entity.id);
+          log.push(`Resolved interest '${interest}' to entity ID: ${entity.id}`);
+        } else {
+          log.push(`No entity of type '${qlooSearchType}' found for interest: '${interest}'`);
+        }
       } else {
-        log.push(`No tag URN found for interest: '${interest}'`);
+        log.push(`No search results for interest: '${interest}'`);
       }
     } catch (err) {
-      log.push(`Error resolving tag for interest '${interest}': ${err}`);
+      const errorMessage = err.response ? JSON.stringify(err.response.data) : err.message;
+      log.push(`Error resolving entity for interest '${interest}': ${errorMessage}`);
     }
   }
-  return tagUrns;
+  return entityIds;
 }
 
 // Helper: Get Qloo recommendations
-async function getQlooRecommendations(entityType: string, tagUrns: string[], log: string[]): Promise<any[]> {
-  const params = {
-    'filter.type': entityType,
-    'signal.interests.tags': tagUrns.join(','),
+async function getQlooRecommendations(entityType: string, entityIds: string[], log: string[]): Promise<any[]> {
+  const body = {
+    filter: { type: entityType },
+    signal: { interests: { entities: entityIds } },
     take: 5,
   };
   try {
-    const resp = await axios.get(`${QLOO_BASE_URL}/insights`, {
-      params,
-      headers: { 'x-api-key': QLOO_API_KEY },
+    const resp = await axios.post(`${QLOO_BASE_URL}/insights`, body, {
+      headers: { 'x-api-key': QLOO_API_KEY, 'Content-Type': 'application/json' },
     });
-    log.push(`Qloo insights call params: ${JSON.stringify(params)}`);
-    log.push(`Qloo insights response: ${JSON.stringify(resp.data?.results || [])}`);
-    return resp.data?.results || [];
+    log.push(`Qloo insights call body: ${JSON.stringify(body)}`);
+    log.push(`Qloo insights response: ${JSON.stringify(resp.data?.data || [])}`);
+    return resp.data?.data || [];
   } catch (err) {
-    log.push(`Error calling Qloo insights: ${err}`);
+    const errorMessage = err.response ? JSON.stringify(err.response.data) : err.message;
+    log.push(`Error calling Qloo insights: ${errorMessage}`);
     return [];
   }
 }
@@ -252,16 +272,17 @@ export default async function handler(req, res) {
       const interests = aggregateInterests(users, type, log);
       if (interests.length === 0) {
         res.status(404).json({ error: 'No interests found for group.' });
+        res.status(404).json({ error: 'No interests found for group.', debugLog: log });
         return;
       }
-      // 4. Resolve tags
-      const tagUrns = await resolveTags(interests, log);
-      if (tagUrns.length === 0) {
-        res.status(404).json({ error: 'No Qloo tags found for interests.' });
+      // 4. Resolve entities
+      const entityIds = await resolveEntities(interests, type, log);
+      if (entityIds.length === 0) {
+        res.status(404).json({ error: 'Could not resolve interests to any known entities.', debugLog: log });
         return;
       }
       // 5. Qloo recommendations
-      const qlooRecs = await getQlooRecommendations(entityType, tagUrns, log);
+      const qlooRecs = await getQlooRecommendations(entityType, entityIds, log);
       // 6. Gemini response
       const gemini = await getGeminiResponse(users, qlooRecs, type, log);
       // 7. Return JSON
@@ -269,7 +290,7 @@ export default async function handler(req, res) {
         groupId,
         type,
         interests,
-        tagUrns,
+        entityIds,
         qlooRecommendations: qlooRecs,
         gemini,
         debugLog: log,
