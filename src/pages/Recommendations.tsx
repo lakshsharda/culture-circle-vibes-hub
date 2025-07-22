@@ -44,6 +44,10 @@ const Recommendations = () => {
     { urn: "urn:entity:video_game", label: "Video Game", key: "videoGames", searchType: "video_game" },
   ];
   const [selectedEntityType, setSelectedEntityType] = useState(supportedEntityTypes[0].urn);
+  const [recommendationMode, setRecommendationMode] = useState<'standard' | 'itinerary'>('standard');
+  const [itineraryDestination, setItineraryDestination] = useState('');
+  const [itineraryDays, setItineraryDays] = useState(3);
+  const [itineraryResult, setItineraryResult] = useState<any[] | null>(null);
 
   // Mock groups data
   // const groups = [
@@ -187,48 +191,97 @@ const Recommendations = () => {
 
   // Refactored handleSendMessage
   const handleSendMessage = async (userPrompt: string) => {
-    setQlooLoading(true);
+    setIsGenerating(true);
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: userPrompt,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, userMessage]);
+
     try {
+      if (recommendationMode === 'itinerary') {
+        setItineraryResult(null);
+        const res = await fetch('/api/recommendations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            groupId: selectedGroup,
+            type: 'itinerary',
+            destination: itineraryDestination,
+            days: itineraryDays
+          })
+        });
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ error: "Failed to parse error response" }));
+          toast({ title: "API Error", description: errorData.error || "An unknown error occurred.", variant: "destructive" });
+          setIsGenerating(false);
+          return;
+        }
+        const data = await res.json();
+        setItineraryResult(data.itinerary);
+        const aiResponse: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `**🗺️ Here is your ${data.days}-day itinerary for ${data.destination}:**`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, aiResponse]);
+        setIsGenerating(false);
+        return;
+      }
       const res = await fetch('/api/recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          groupId: selectedGroup, // or selectedGroupId if that's the actual group id
+          groupId: selectedGroup,
           type: selectedEntityType === "urn:entity:artist" ? "music"
               : selectedEntityType === "urn:entity:movie" ? "movie"
               : selectedEntityType === "urn:entity:place" ? "restaurant"
               : selectedEntityType === "urn:entity:destination" ? "travel"
-              : "music" // default fallback
+              : "music"
         })
       });
+
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Failed to parse error response" }));
         console.error("API Error:", errorData);
         toast({ title: "API Error", description: errorData.error || "An unknown error occurred.", variant: "destructive" });
-        setQlooLoading(false);
+        setIsGenerating(false);
         return;
       }
+
       const data = await res.json();
-      // Use data.gemini.summary, data.gemini.harmonyScore, etc. as needed
-      // Add Gemini response to chat
-      const userMessage: ChatMessage = {
-        id: Date.now().toString(),
-        type: 'user',
-        content: userPrompt,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, userMessage]);
+      const { recommendation, alternative, harmonyScore, vibeAnalysis } = data.gemini;
+
+      const aiContent = `**✨ Here's a vibe for your group! ✨**
+
+**Recommendation:**
+${recommendation}
+
+**Alternative Idea:**
+${alternative || "No alternative suggestion was generated."}
+
+---
+
+**Harmony Score: ${harmonyScore}/100**
+
+**Vibe Analysis:**
+${vibeAnalysis}`;
+
       const aiResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: data.gemini.summary + "\n\nHarmony Score: " + data.gemini.harmonyScore + "\n" + data.gemini.reasoning,
+        content: aiContent,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, aiResponse]);
+
     } catch (e) {
       toast({ title: "AI Error", description: "Failed to get recommendation.", variant: "destructive" });
     } finally {
-      setQlooLoading(false);
+      setIsGenerating(false);
     }
   };
 
@@ -333,35 +386,23 @@ const Recommendations = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                
                 {selectedGroup && (
                   <div className="flex gap-2 mt-6 sm:mt-0">
                     <Button
-                      variant="warm-outline"
+                      variant={recommendationMode === 'standard' ? 'warm' : 'outline'}
                       size="sm"
-                      onClick={handleGenerateAgain}
-                      disabled={isGenerating || messages.length === 0}
+                      onClick={() => setRecommendationMode('standard')}
+                      disabled={isGenerating}
                     >
-                      <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
-                      Generate Again
+                      Standard
                     </Button>
                     <Button
-                      variant="outline"
+                      variant={recommendationMode === 'itinerary' ? 'warm' : 'outline'}
                       size="sm"
-                      onClick={handleSavePlan}
-                      disabled={messages.length === 0}
+                      onClick={() => setRecommendationMode('itinerary')}
+                      disabled={isGenerating}
                     >
-                      <Save className="h-4 w-4 mr-1" />
-                      Save Plan
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCopyPlan}
-                      disabled={messages.length === 0}
-                    >
-                      <Copy className="h-4 w-4 mr-1" />
-                      Copy
+                      Itinerary
                     </Button>
                   </div>
                 )}
@@ -378,7 +419,6 @@ const Recommendations = () => {
                 <Badge variant="secondary" className="text-xs">Online</Badge>
               </div>
             </div>
-            
             <CardContent className="p-0">
               {/* Messages Area */}
               <ScrollArea className="h-[500px] p-6">
@@ -436,13 +476,11 @@ const Recommendations = () => {
                               <span className="text-xs font-medium text-primary">CultureCircle AI</span>
                             </div>
                           )}
-                          
                           <div className={`whitespace-pre-wrap leading-relaxed ${
                             message.type === 'user' ? 'text-white' : 'text-foreground'
                           }`}>
                             {message.content}
                           </div>
-                          
                           <div className={`text-xs mt-3 opacity-70 flex items-center gap-2 ${
                             message.type === 'user' ? 'text-white' : 'text-muted-foreground'
                           }`}>
@@ -461,7 +499,27 @@ const Recommendations = () => {
                         </div>
                       </div>
                     ))}
-                    
+                    {itineraryResult && (
+                      <div className="bg-white border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[85%] mx-auto">
+                        <h3 className="text-xl font-bold mb-2">🗺️ Group Itinerary</h3>
+                        {Array.isArray(itineraryResult) ? (
+                          itineraryResult.map((day, idx) => (
+                            <div key={idx} className="mb-4">
+                              <div className="font-semibold">Day {day.day || idx + 1}</div>
+                              <ul className="list-disc ml-6">
+                                {Array.isArray(day.activities)
+                                  ? day.activities.map((act: string, i: number) => <li key={i}>{act}</li>)
+                                  : null}
+                              </ul>
+                              {day.description && <div className="text-muted-foreground mt-1">{day.description}</div>}
+                              {day.error && <div className="text-red-500 mt-1">{day.error}</div>}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-red-500">{JSON.stringify(itineraryResult)}</div>
+                        )}
+                      </div>
+                    )}
                     {isGenerating && (
                       <div className="flex justify-start">
                         <div className="bg-white border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[85%]">
@@ -471,7 +529,6 @@ const Recommendations = () => {
                             </div>
                             <span className="text-xs font-medium text-primary">CultureCircle AI</span>
                           </div>
-                          
                           <div className="flex items-center gap-3">
                             <div className="flex space-x-1">
                               <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
@@ -495,14 +552,44 @@ const Recommendations = () => {
                     <label className="block text-sm font-medium mb-1">Select Recommendation Type</label>
                     <select
                       className="w-full border rounded px-3 py-2"
-                      value={selectedEntityType}
-                      onChange={e => setSelectedEntityType(e.target.value)}
+                      value={recommendationMode === 'itinerary' ? 'itinerary' : selectedEntityType}
+                      onChange={e => {
+                        if (e.target.value === 'itinerary') {
+                          setRecommendationMode('itinerary');
+                        } else {
+                          setRecommendationMode('standard');
+                          setSelectedEntityType(e.target.value);
+                        }
+                      }}
                     >
+                      <option value="itinerary">Itinerary (Travel Plan)</option>
                       {supportedEntityTypes.map((type) => (
                         <option key={type.urn} value={type.urn}>{type.label}</option>
                       ))}
                     </select>
                   </div>
+                  {recommendationMode === 'itinerary' && (
+                    <>
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium mb-1">Destination</label>
+                        <Input
+                          value={itineraryDestination}
+                          onChange={e => setItineraryDestination(e.target.value)}
+                          placeholder="e.g. Tokyo"
+                        />
+                      </div>
+                      <div className="w-32">
+                        <label className="block text-sm font-medium mb-1">Days</label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={14}
+                          value={itineraryDays}
+                          onChange={e => setItineraryDays(Number(e.target.value))}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex gap-4">
                   <div className="flex-1 relative">
@@ -510,7 +597,7 @@ const Recommendations = () => {
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="What amazing experience should we plan? ✨"
+                      placeholder={recommendationMode === 'itinerary' ? "What kind of trip do you want? (optional)" : "What amazing experience should we plan? ✨"}
                       className="flex-1 h-12 pl-4 pr-12 text-base bg-white/90 backdrop-blur-sm border-0 shadow-lg rounded-2xl focus:ring-2 focus:ring-primary/20"
                       disabled={!selectedGroup}
                     />
@@ -520,7 +607,6 @@ const Recommendations = () => {
                       </div>
                     )}
                   </div>
-                  
                   <Button
                     onClick={() => handleSendMessage(inputMessage)}
                     variant="warm"
@@ -534,7 +620,6 @@ const Recommendations = () => {
                     )}
                   </Button>
                 </div>
-                
                 {!selectedGroup ? (
                   <p className="text-sm text-muted-foreground mt-3 text-center">
                     ✨ Select a group above to unlock AI-powered recommendations

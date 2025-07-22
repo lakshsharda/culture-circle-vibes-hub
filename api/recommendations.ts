@@ -204,8 +204,40 @@ async function getQlooRecommendations(entityType: string, entityIds: string[], l
 }
 
 // Helper: Call Gemini API
-async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: string, log: string[]): Promise<{ summary: string; harmonyScore: number; reasoning: string }> {
-  const prompt = `Given this group's cultural preferences (JSON):\n${JSON.stringify(users, null, 2)}\nand these Qloo recommendations (JSON):\n${JSON.stringify(qlooRecs, null, 2)}\n\nPlease do the following:\n1. Suggest a shared experience (playlist, movie night, trip, dinner plan) that best matches everyone's taste.\n2. Write a natural language summary of why these recommendations fit the group.\n3. Calculate a group harmony score (0-100) based on how much overlap or similarity you see in the preferences and tags.\n4. Explain your reasoning for the harmony score.\n\nReturn your answer as a JSON object with keys: summary (string), harmonyScore (number), reasoning (string).`;
+async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: string, log: string[]): Promise<{ recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; }> {
+  const prompt = `You are CultureCircle AI, an expert cultural concierge and vibe curator. Your specialty is crafting unique, delightful, and memorable shared experiences for groups, even when their tastes are wildly different.
+
+Analyze the following group's cultural preferences and the data-driven recommendations from our backend.
+
+Group Preferences (JSON):
+${JSON.stringify(users, null, 2)}
+
+Initial Recommendations (JSON):
+${JSON.stringify(qlooRecs, null, 2)}
+
+Your task is to transform this raw data into a truly inspired suggestion. Please do the following:
+
+1.  **Craft a Compelling Recommendation:**
+    *   Instead of just one idea, propose a main recommendation and maybe a "wild card" alternative.
+    *   Be specific and evocative. For a movie night, don't just say "watch a comedy." Suggest a specific film, explain *why* it bridges the group's tastes (e.g., "it has the witty dialogue User A loves and the heartwarming moments User B enjoys"), and maybe even suggest a themed snack or drink.
+    *   For a dinner, don't just name a cuisine. Describe the atmosphere. Suggest a type of restaurant or even a recipe if they were to cook at home.
+    *   Think outside the box! Could their love for different things be combined? (e.g., "A historical fiction book set in a travel destination one of them loves").
+
+2.  **Calculate a "Harmony Score" (0-100):**
+    *   This score should reflect the potential for a shared good time, not just data overlap. A low score might mean the tastes are very different, but your creative recommendation can still make for a high-harmony experience.
+
+3.  **Write the "Vibe Analysis":**
+    *   This is the most important part. Explain your reasoning for the recommendation and the score.
+    *   Frame the group's dynamic positively. Instead of "they have nothing in common," say "this group has a wonderfully eclectic mix of tastes, which opens up exciting possibilities."
+    *   Explain *how* your recommendation bridges their interests and creates a new, shared experience. Highlight the "why" behind your suggestion.
+
+**Output Format:**
+Return your answer as a single, clean JSON object with the following keys:
+- \`recommendation\`: (string) Your main, detailed recommendation.
+- \`alternative\`: (string) A creative alternative suggestion.
+- \`harmonyScore\`: (number) The 0-100 score.
+- \`vibeAnalysis\`: (string) Your detailed explanation and reasoning.
+`;
   log.push(`Gemini prompt: ${prompt}`);
   const resp = await axios.post(
     `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
@@ -214,27 +246,29 @@ async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: 
     }
   );
   // Try to extract JSON from Gemini response
-  let summary = '';
+  let recommendation = '';
+  let alternative = '';
   let harmonyScore = 0;
-  let reasoning = '';
+  let vibeAnalysis = '';
   try {
     const text = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const match = text.match(/\{[\s\S]*\}/);
     if (match) {
       const parsed = JSON.parse(match[0]);
-      summary = parsed.summary || '';
+      recommendation = parsed.recommendation || '';
+      alternative = parsed.alternative || '';
       harmonyScore = parsed.harmonyScore || 0;
-      reasoning = parsed.reasoning || '';
+      vibeAnalysis = parsed.vibeAnalysis || '';
     } else {
-      summary = text;
-      reasoning = 'Could not parse structured reasoning.';
+      recommendation = text;
+      vibeAnalysis = 'Could not parse structured reasoning.';
     }
   } catch (err) {
-    summary = 'Could not parse Gemini response.';
-    reasoning = 'Error parsing Gemini response.';
+    recommendation = 'Could not parse Gemini response.';
+    vibeAnalysis = 'Error parsing Gemini response.';
   }
-  log.push(`Gemini response: summary='${summary}', harmonyScore=${harmonyScore}, reasoning='${reasoning}'`);
-  return { summary, harmonyScore, reasoning };
+  log.push(`Gemini response: recommendation='${recommendation}', harmonyScore=${harmonyScore}`);
+  return { recommendation, alternative, harmonyScore, vibeAnalysis };
 }
 //secret comment1
 //secret comment
@@ -251,10 +285,69 @@ export default async function handler(req, res) {
       res.status(405).json({ error: 'Only POST requests are allowed.' });
       return;
     }
-    const { groupId, type } = req.body;
+    const { groupId, type, destination, days } = req.body;
     if (!groupId || !type) {
       res.status(400).json({ error: 'Missing groupId or type in request body.' });
       return;
+    }
+    if (type === 'itinerary') {
+      // 1. Fetch group members
+      try {
+        const memberIds = await getGroupMemberIds(groupId);
+        console.log("Found memberIds:", memberIds);
+        // 2. Fetch user interests
+        const users: UserInterests[] = [];
+        for (const userEmail of memberIds) {
+          try {
+            users.push(await getUserInterests(userEmail));
+          } catch (err) {
+            log.push(`User not found or error for userEmail: ${userEmail}`);
+          }
+        }
+        if (users.length === 0) {
+          res.status(404).json({ error: 'No valid users found in group.' });
+          return;
+        }
+        // 3. Aggregate interests
+        const interests = aggregateInterests(users, 'travel', log);
+        // 4. Compose Gemini prompt for itinerary
+        const tripDestination = destination || 'a fun city';
+        const tripDays = days || 3;
+        const itineraryPrompt = `You are CultureCircle AI, an expert travel planner. Given the following group travel preferences and interests, create a detailed ${tripDays}-day itinerary for a trip to ${tripDestination}. Each day should include morning, afternoon, and evening activities, with a focus on food, culture, and experiences that fit the group's tastes. Be specific and creative.\n\nGroup Interests (JSON):\n${JSON.stringify(users, null, 2)}\n\nOutput a JSON array, where each element is an object with 'day', 'activities' (array of strings), and 'description' (string).`;
+        log.push(`Gemini itinerary prompt: ${itineraryPrompt}`);
+        const resp = await axios.post(
+          `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+          {
+            contents: [{ parts: [{ text: itineraryPrompt }] }],
+          }
+        );
+        let itinerary = [];
+        try {
+          const text = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const match = text.match(/\[.*\]/s);
+          if (match) {
+            itinerary = JSON.parse(match[0]);
+          } else {
+            itinerary = [{ error: 'Could not parse Gemini itinerary response.', raw: text }];
+          }
+        } catch (err) {
+          itinerary = [{ error: 'Could not parse Gemini itinerary response.' }];
+        }
+        res.json({
+          groupId,
+          type,
+          destination: tripDestination,
+          days: tripDays,
+          interests,
+          itinerary,
+          debugLog: log,
+        });
+        return;
+      } catch (err) {
+        log.push(`Error fetching group members: ${err.message || err}`);
+        res.status(500).json({ error: err.message || 'Internal server error', debugLog: log });
+        return;
+      }
     }
     const entityType = RECOMMENDATION_TYPE_TO_ENTITY[type];
     if (!entityType) {
