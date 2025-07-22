@@ -26,6 +26,12 @@ const Navbar = ({ isAuthenticated, onLogout }: NavbarProps) => {
     (item.public || isAuthenticated) && !(isAuthenticated && item.hideWhenAuth)
   );
 
+  // Remove private nav items after logout by clearing isAuthenticated immediately
+  const handleLogout = () => {
+    onLogout();
+    setIsMenuOpen(false);
+  };
+
   return (
     <nav className="sticky top-0 bg-card shadow-md z-50 px-6 py-3">
       <div className="container mx-auto flex justify-between items-center">
@@ -59,7 +65,7 @@ const Navbar = ({ isAuthenticated, onLogout }: NavbarProps) => {
             <Button
               variant="warm-outline"
               size="sm"
-              onClick={onLogout}
+              onClick={handleLogout}
             >
               Logout
             </Button>
@@ -100,10 +106,7 @@ const Navbar = ({ isAuthenticated, onLogout }: NavbarProps) => {
               <Button
                 variant="warm-outline"
                 size="sm"
-                onClick={() => {
-                  onLogout();
-                  setIsMenuOpen(false);
-                }}
+                onClick={handleLogout}
                 className="w-full"
               >
                 Logout

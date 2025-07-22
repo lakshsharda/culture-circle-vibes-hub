@@ -69,20 +69,6 @@ const Home = ({ isAuthenticated }: HomeProps) => {
           </div>
 
           {/* Trust indicators */}
-          <div className="grid grid-cols-3 gap-8 max-w-md mx-auto text-center">
-            <div>
-              <div className="text-2xl font-bold text-primary">10K+</div>
-              <div className="text-sm text-muted-foreground">Cultural Groups</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-primary">50K+</div>
-              <div className="text-sm text-muted-foreground">Recommendations</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-primary">25K+</div>
-              <div className="text-sm text-muted-foreground">Happy Users</div>
-            </div>
-          </div>
           
           {!isAuthenticated && (
             <p className="text-sm text-muted-foreground mt-8 opacity-75">
