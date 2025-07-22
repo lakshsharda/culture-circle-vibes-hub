@@ -351,19 +351,18 @@ ${vibeAnalysis}`;
   };
 
   return (
-    <div className="min-h-screen bg-background py-8 px-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-accent py-8 px-6">
       <div className="container mx-auto max-w-4xl">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-extrabold text-primary mb-2">AI Recommendations</h1>
-          <p className="text-lg text-muted-foreground">
+        <div className="mb-8 text-center">
+          <h1 className="text-5xl font-extrabold text-primary mb-2 drop-shadow-lg">AI Recommendations</h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Get personalized suggestions for your cultural group experiences.
           </p>
         </div>
-
         <div className="grid gap-6">
           {/* Group Selection */}
-          <Card className="bg-card shadow-lg">
+          <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                 <div className="flex-1">
@@ -393,6 +392,7 @@ ${vibeAnalysis}`;
                       size="sm"
                       onClick={() => setRecommendationMode('standard')}
                       disabled={isGenerating}
+                      className="rounded-full px-6 font-bold shadow-md"
                     >
                       Standard
                     </Button>
@@ -401,6 +401,7 @@ ${vibeAnalysis}`;
                       size="sm"
                       onClick={() => setRecommendationMode('itinerary')}
                       disabled={isGenerating}
+                      className="rounded-full px-6 font-bold shadow-md"
                     >
                       Itinerary
                     </Button>
@@ -409,15 +410,12 @@ ${vibeAnalysis}`;
               </div>
             </CardContent>
           </Card>
-
           {/* Enhanced Chat Interface */}
-          <Card className="bg-card shadow-xl border-0 overflow-hidden">
-            <div className="bg-gradient-to-r from-primary/10 via-warm-orange/10 to-warm-yellow/10 p-4 border-b">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="font-medium text-foreground">CultureCircle AI Assistant</span>
-                <Badge variant="secondary" className="text-xs">Online</Badge>
-              </div>
+          <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl border-0 overflow-hidden rounded-2xl">
+            <div className="bg-gradient-to-r from-primary/10 via-warm-orange/10 to-warm-yellow/10 p-4 border-b flex items-center gap-3">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="font-medium text-foreground">CultureCircle AI Assistant</span>
+              <Badge variant="secondary" className="text-xs">Online</Badge>
             </div>
             <CardContent className="p-0">
               {/* Messages Area */}
@@ -425,31 +423,27 @@ ${vibeAnalysis}`;
                 {messages.length === 0 ? (
                   <div className="text-center py-16">
                     <div className="relative mb-6">
-                      <div className="w-20 h-20 bg-button-gradient rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <div className="w-20 h-20 bg-button-gradient rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg animate-float">
                         <Sparkles className="h-10 w-10 text-white animate-pulse" />
                       </div>
                       <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-white"></div>
                     </div>
-                    
                     <h3 className="text-2xl font-bold text-foreground mb-3">Start Your Planning Journey</h3>
                     <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
                       I'm here to help you create amazing experiences with your cultural group!
                     </p>
-                    
                     <div className="grid md:grid-cols-3 gap-4 text-sm max-w-3xl mx-auto">
-                      <Card className="bg-secondary/50 border-0 p-4 hover:bg-secondary/70 transition-colors cursor-pointer">
+                      <Card className="bg-secondary/50 border-0 p-4 hover:bg-secondary/70 transition-colors cursor-pointer rounded-xl shadow-md">
                         <div className="text-2xl mb-2">🗾</div>
                         <div className="font-medium text-foreground mb-1">Travel Planning</div>
                         <div className="text-xs text-muted-foreground">"Plan a 3-day Tokyo trip for my group"</div>
                       </Card>
-                      
-                      <Card className="bg-secondary/50 border-0 p-4 hover:bg-secondary/70 transition-colors cursor-pointer">
+                      <Card className="bg-secondary/50 border-0 p-4 hover:bg-secondary/70 transition-colors cursor-pointer rounded-xl shadow-md">
                         <div className="text-2xl mb-2">🎵</div>
                         <div className="font-medium text-foreground mb-1">Music & Playlists</div>
                         <div className="text-xs text-muted-foreground">"Create a playlist for our road trip"</div>
                       </Card>
-                      
-                      <Card className="bg-secondary/50 border-0 p-4 hover:bg-secondary/70 transition-colors cursor-pointer">
+                      <Card className="bg-secondary/50 border-0 p-4 hover:bg-secondary/70 transition-colors cursor-pointer rounded-xl shadow-md">
                         <div className="text-2xl mb-2">🍜</div>
                         <div className="font-medium text-foreground mb-1">Food & Dining</div>
                         <div className="text-xs text-muted-foreground">"Suggest restaurants for our foodie night"</div>
@@ -463,14 +457,14 @@ ${vibeAnalysis}`;
                         key={message.id}
                         className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div className={`max-w-[85%] rounded-2xl px-5 py-4 shadow-lg ${
+                        <div className={`max-w-[85%] px-5 py-4 shadow-lg rounded-2xl mb-2 ${
                           message.type === 'user'
-                            ? 'bg-button-gradient text-white'
-                            : 'bg-white border border-border'
+                            ? 'bg-gradient-to-br from-primary/80 via-warm-yellow/60 to-accent/60 text-white'
+                            : 'bg-white/90 border border-border text-foreground'
                         }`}>
                           {message.type === 'assistant' && (
                             <div className="flex items-center gap-2 mb-2">
-                              <div className="w-6 h-6 bg-button-gradient rounded-full flex items-center justify-center">
+                              <div className="w-6 h-6 bg-button-gradient rounded-full flex items-center justify-center animate-float">
                                 <Sparkles className="h-3 w-3 text-white" />
                               </div>
                               <span className="text-xs font-medium text-primary">CultureCircle AI</span>
@@ -500,21 +494,28 @@ ${vibeAnalysis}`;
                       </div>
                     ))}
                     {itineraryResult && (
-                      <div className="bg-white border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[85%] mx-auto">
-                        <h3 className="text-xl font-bold mb-2">🗺️ Group Itinerary</h3>
+                      <div className="bg-white/90 border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[85%] mx-auto mt-6">
+                        <h3 className="text-xl font-bold mb-4 text-primary flex items-center gap-2">
+                          <span>🗺️</span> Group Itinerary
+                        </h3>
                         {Array.isArray(itineraryResult) ? (
-                          itineraryResult.map((day, idx) => (
-                            <div key={idx} className="mb-4">
-                              <div className="font-semibold">Day {day.day || idx + 1}</div>
-                              <ul className="list-disc ml-6">
-                                {Array.isArray(day.activities)
-                                  ? day.activities.map((act: string, i: number) => <li key={i}>{act}</li>)
-                                  : null}
-                              </ul>
-                              {day.description && <div className="text-muted-foreground mt-1">{day.description}</div>}
-                              {day.error && <div className="text-red-500 mt-1">{day.error}</div>}
-                            </div>
-                          ))
+                          <ol className="relative border-l-4 border-primary/30 ml-4">
+                            {itineraryResult.map((day, idx) => (
+                              <li key={idx} className="mb-8 ml-6">
+                                <span className="absolute -left-5 flex items-center justify-center w-8 h-8 bg-primary/80 rounded-full ring-4 ring-white text-white font-bold text-lg shadow-lg">
+                                  {day.day || idx + 1}
+                                </span>
+                                <div className="mb-2 font-semibold text-lg text-primary">Day {day.day || idx + 1}</div>
+                                <ul className="list-disc ml-6 mb-2">
+                                  {Array.isArray(day.activities)
+                                    ? day.activities.map((act: string, i: number) => <li key={i}>{act}</li>)
+                                    : null}
+                                </ul>
+                                {day.description && <div className="text-muted-foreground mt-1">{day.description}</div>}
+                                {day.error && <div className="text-red-500 mt-1">{day.error}</div>}
+                              </li>
+                            ))}
+                          </ol>
                         ) : (
                           <div className="text-red-500">{JSON.stringify(itineraryResult)}</div>
                         )}
@@ -522,10 +523,10 @@ ${vibeAnalysis}`;
                     )}
                     {isGenerating && (
                       <div className="flex justify-start">
-                        <div className="bg-white border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[85%]">
+                        <div className="bg-white border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[85%] animate-pulse">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="w-6 h-6 bg-button-gradient rounded-full flex items-center justify-center">
-                              <Sparkles className="h-3 w-3 text-white animate-pulse" />
+                            <div className="w-6 h-6 bg-button-gradient rounded-full flex items-center justify-center animate-spin">
+                              <Sparkles className="h-3 w-3 text-white" />
                             </div>
                             <span className="text-xs font-medium text-primary">CultureCircle AI</span>
                           </div>
@@ -544,7 +545,6 @@ ${vibeAnalysis}`;
                 )}
                 <div ref={messagesEndRef} />
               </ScrollArea>
-
               {/* Enhanced Input Area */}
               <div className="border-t bg-gradient-to-r from-secondary/30 to-accent/30 p-6">
                 <div className="flex gap-4 mb-4">
@@ -611,7 +611,7 @@ ${vibeAnalysis}`;
                     onClick={() => handleSendMessage(inputMessage)}
                     variant="warm"
                     disabled={!inputMessage.trim() || !selectedGroup || isGenerating || qlooLoading}
-                    className="h-12 px-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                    className="h-12 px-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-full font-bold"
                   >
                     {isGenerating || qlooLoading ? (
                       <RefreshCw className="h-5 w-5 animate-spin" />

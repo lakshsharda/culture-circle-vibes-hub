@@ -120,6 +120,38 @@ const Signup = ({ onSignup }: SignupProps) => {
     }
   };
 
+  // Validation for each step
+  const isStepValid = () => {
+    if (currentStep === 1) {
+      return (
+        formData.fullName.trim() !== "" &&
+        formData.email.trim() !== "" &&
+        formData.password.trim() !== ""
+      );
+    }
+    if (currentStep === 2) {
+      return (
+        formData.musicArtists.length > 0 &&
+        formData.movies.length > 0 &&
+        formData.books.length > 0
+      );
+    }
+    if (currentStep === 3) {
+      return (
+        formData.travelDestinations.length > 0 &&
+        formData.cuisines.length > 0 &&
+        formData.tvShows.length > 0
+      );
+    }
+    if (currentStep === 4) {
+      return (
+        formData.recommendationType.trim() !== "" &&
+        formData.vibeDescription.trim() !== ""
+      );
+    }
+    return false;
+  };
+
   const stepIcons = [User, Music, MapPin, Target];
   const stepTitles = ["Basic Info", "Your Vibes", "Your Tastes", "Your Intent"];
 
@@ -329,12 +361,12 @@ const Signup = ({ onSignup }: SignupProps) => {
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Previous
               </Button>
-              
               {currentStep < totalSteps ? (
                 <Button
                   variant="warm"
                   onClick={handleNext}
                   className="flex items-center"
+                  disabled={!isStepValid()}
                 >
                   Next
                   <ChevronRight className="h-4 w-4 ml-1" />
@@ -344,6 +376,7 @@ const Signup = ({ onSignup }: SignupProps) => {
                   variant="warm"
                   onClick={handleSubmit}
                   className="flex items-center"
+                  disabled={!isStepValid()}
                 >
                   Complete Signup
                   <CheckCircle className="h-4 w-4 ml-1" />

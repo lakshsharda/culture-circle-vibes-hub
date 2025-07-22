@@ -272,7 +272,7 @@ const Dashboard = () => {
 
   const getCategoryIcon = (category: string) => {
     const icons = {
-      Travel: "��",
+      Travel: "🌍",
       Music: "🎵",
       Food: "🍽️",
       Art: "🎨",
@@ -370,27 +370,26 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background py-8 px-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-accent py-8 px-6">
       <div className="container mx-auto max-w-6xl">
         {/* Header */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-center sm:text-left">
           <div>
-          <h1 className="text-4xl font-extrabold text-primary mb-2">Dashboard</h1>
-          <p className="text-lg text-muted-foreground">
-            Manage your cultural groups and discover new experiences together.
-          </p>
+            <h1 className="text-5xl font-extrabold text-primary mb-2 drop-shadow-lg">Dashboard</h1>
+            <p className="text-xl text-muted-foreground">
+              Manage your cultural groups and discover new experiences together.
+            </p>
           </div>
           <Link to="/edit-profile">
-            <Button variant="warm-outline" className="font-semibold">
+            <Button variant="warm-outline" className="font-semibold rounded-full px-6 py-2 shadow-md hover:scale-105 transition-transform">
               Edit Profile
             </Button>
           </Link>
         </div>
-
         {/* Group Creation & Join Forms */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           {/* Create Group */}
-          <Card className="bg-card shadow-lg">
+          <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
             <CardHeader>
               <CardTitle className="text-lg font-bold">Create Group</CardTitle>
             </CardHeader>
@@ -462,7 +461,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           {/* Join Group by Code */}
-          <Card className="bg-card shadow-lg">
+          <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
             <CardHeader>
               <CardTitle className="text-lg font-bold">Join Group by Code</CardTitle>
             </CardHeader>
@@ -482,9 +481,8 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
-
         {/* Add Group Requests section to Dashboard (for owners) */}
-        <Card className="bg-card shadow-lg mb-8">
+        <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl mb-8">
           <CardHeader>
             <CardTitle className="text-lg font-bold">Group Requests</CardTitle>
           </CardHeader>
@@ -511,9 +509,8 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
-
         {/* Add User Group Requests section to Dashboard */}
-        <Card className="bg-card shadow-lg mb-8">
+        <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl mb-8">
           <CardHeader>
             <CardTitle className="text-lg font-bold">Your Group Invites</CardTitle>
           </CardHeader>
@@ -540,11 +537,10 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
-
         <div className="grid lg:grid-cols-3 gap-8">
           {/* My Groups Section */}
           <section className="lg:col-span-2">
-            <Card className="bg-card shadow-lg">
+            <Card className="bg-gradient-to-br from-secondary/30 via-accent/10 to-card/80 border-0 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-primary" />
@@ -712,7 +708,7 @@ const Dashboard = () => {
           <section>
             <div className="space-y-6">
               {/* Quick Stats */}
-              <Card className="bg-card shadow-lg">
+              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-primary" />
@@ -738,7 +734,7 @@ const Dashboard = () => {
               </Card>
 
               {/* Recent Activity */}
-              <Card className="bg-card shadow-lg">
+              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
                 <CardHeader>
                   <CardTitle className="text-lg">Recent Activity</CardTitle>
                 </CardHeader>

@@ -272,23 +272,22 @@ const Groups = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background py-8 px-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-accent py-8 px-6">
       <div className="container mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-extrabold text-primary mb-2">Group Management</h1>
-          <p className="text-lg text-muted-foreground">
+        <div className="mb-8 text-center">
+          <h1 className="text-5xl font-extrabold text-primary mb-2 drop-shadow-lg">Group Management</h1>
+          <p className="text-xl text-muted-foreground">
             Manage all your cultural groups, members, and settings in one place.
           </p>
         </div>
-
         <div className="grid lg:grid-cols-3 gap-8">
           {/* My Groups Section */}
           <section className="lg:col-span-2">
-            <Card className="bg-card shadow-lg">
+            <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
+                  <Users className="h-5 w-5 text-primary animate-float" />
                   My Groups ({groups.length})
                 </CardTitle>
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -366,19 +365,19 @@ const Groups = () => {
               <CardContent>
                 {groups.length === 0 ? (
                   <div className="text-center py-12">
-                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-float" />
                     <p className="text-muted-foreground mb-4">No groups yet</p>
                     <p className="text-sm text-muted-foreground">Create your first group to get started!</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
                     {groups.map((group) => (
-                      <Card key={group.id} className="bg-secondary/30 border-0">
+                      <Card key={group.id} className="bg-gradient-to-br from-secondary/30 via-accent/10 to-card/80 border-0 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105">
                         <CardContent className="p-6">
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-xl font-bold text-foreground">{group.name}</h3>
+                                <h3 className="text-xl font-bold text-foreground drop-shadow-lg">{group.name}</h3>
                                 {group.isOwner && (
                                   <Badge variant="secondary" className="flex items-center gap-1">
                                     <Crown className="h-3 w-3" />
@@ -421,13 +420,13 @@ const Groups = () => {
                               <div className="flex flex-wrap gap-2">
                                 {group.members.slice(0, 4).map((member, index) => (
                                   <div key={index} className="flex items-center gap-2">
-                                    <Avatar className="w-6 h-6">
+                                    <Avatar className="w-8 h-8 border-2 border-primary/40 shadow-md">
                                       <AvatarImage src="" />
                                       <AvatarFallback className="text-xs">
                                         {member.split(' ').map(n => n[0]).join('')}
                                       </AvatarFallback>
                                     </Avatar>
-                                    <span className="text-sm text-muted-foreground">{member}</span>
+                                    <span className="text-sm text-muted-foreground font-semibold">{member}</span>
                                   </div>
                                 ))}
                                 {group.memberCount > 4 && (
@@ -523,7 +522,7 @@ const Groups = () => {
           <section>
             <div className="space-y-6">
               {/* Update Group */}
-              <Card className="bg-card shadow-lg">
+              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
                 <CardHeader>
                   <CardTitle className="text-lg">Quick Actions</CardTitle>
                 </CardHeader>
@@ -649,7 +648,7 @@ const Groups = () => {
               </Card>
 
               {/* Group Stats */}
-              <Card className="bg-card shadow-lg">
+              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
                 <CardHeader>
                   <CardTitle className="text-lg">Quick Stats</CardTitle>
                 </CardHeader>
