@@ -30,7 +30,6 @@ const Recommendations = () => {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [qlooLoading, setQlooLoading] = useState(false);
   const [qlooResult, setQlooResult] = useState<any>(null);
-
   const supportedEntityTypes = [
     { urn: "urn:entity:artist", label: "Music Artist", key: "musicArtists", searchType: "artist" },
     { urn: "urn:entity:movie", label: "Movie", key: "movies", searchType: "movie" },
@@ -43,6 +42,7 @@ const Recommendations = () => {
     { urn: "urn:entity:podcast", label: "Podcast", key: "podcasts", searchType: "podcast" },
     { urn: "urn:entity:video_game", label: "Video Game", key: "videoGames", searchType: "video_game" },
   ];
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([supportedEntityTypes[0].urn]);
   const [selectedEntityType, setSelectedEntityType] = useState(supportedEntityTypes[0].urn);
   const [recommendationMode, setRecommendationMode] = useState<'standard' | 'itinerary'>('standard');
   const [itineraryDestination, setItineraryDestination] = useState('');
@@ -231,16 +231,13 @@ const Recommendations = () => {
         setIsGenerating(false);
         return;
       }
+      // Multi-category recommendation
       const res = await fetch('/api/recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           groupId: selectedGroup,
-          type: selectedEntityType === "urn:entity:artist" ? "music"
-              : selectedEntityType === "urn:entity:movie" ? "movie"
-              : selectedEntityType === "urn:entity:place" ? "restaurant"
-              : selectedEntityType === "urn:entity:destination" ? "travel"
-              : "music"
+          categories: selectedCategories,
         })
       });
 
@@ -549,24 +546,26 @@ ${vibeAnalysis}`;
               <div className="border-t bg-gradient-to-r from-secondary/30 to-accent/30 p-6">
                 <div className="flex gap-4 mb-4">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium mb-1">Select Recommendation Type</label>
-                    <select
-                      className="w-full border rounded px-3 py-2"
-                      value={recommendationMode === 'itinerary' ? 'itinerary' : selectedEntityType}
-                      onChange={e => {
-                        if (e.target.value === 'itinerary') {
-                          setRecommendationMode('itinerary');
-                        } else {
-                          setRecommendationMode('standard');
-                          setSelectedEntityType(e.target.value);
-                        }
-                      }}
-                    >
-                      <option value="itinerary">Itinerary (Travel Plan)</option>
+                    <label className="block text-sm font-medium mb-1">Select Recommendation Categories</label>
+                    <div className="grid grid-cols-2 gap-2">
                       {supportedEntityTypes.map((type) => (
-                        <option key={type.urn} value={type.urn}>{type.label}</option>
+                        <label key={type.urn} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            value={type.urn}
+                            checked={selectedCategories.includes(type.urn)}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setSelectedCategories(prev => [...prev, type.urn]);
+                              } else {
+                                setSelectedCategories(prev => prev.filter(cat => cat !== type.urn));
+                              }
+                            }}
+                          />
+                          {type.label}
+                        </label>
                       ))}
-                    </select>
+                    </div>
                   </div>
                   {recommendationMode === 'itinerary' && (
                     <>

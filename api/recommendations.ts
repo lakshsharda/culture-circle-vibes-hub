@@ -285,9 +285,9 @@ export default async function handler(req, res) {
       res.status(405).json({ error: 'Only POST requests are allowed.' });
       return;
     }
-    const { groupId, type, destination, days } = req.body;
-    if (!groupId || !type) {
-      res.status(400).json({ error: 'Missing groupId or type in request body.' });
+    const { groupId, type, destination, days, categories } = req.body;
+    if (!groupId || (!type && !categories)) {
+      res.status(400).json({ error: 'Missing groupId or type/categories in request body.' });
       return;
     }
     if (type === 'itinerary') {
@@ -345,6 +345,61 @@ export default async function handler(req, res) {
         return;
       } catch (err) {
         log.push(`Error fetching group members: ${err.message || err}`);
+        res.status(500).json({ error: err.message || 'Internal server error', debugLog: log });
+        return;
+      }
+    }
+
+    // --- Multi-category recommendation ---
+    if (Array.isArray(categories) && categories.length > 0) {
+      try {
+        const memberIds = await getGroupMemberIds(groupId);
+        const users: UserInterests[] = [];
+        for (const userEmail of memberIds) {
+          try {
+            users.push(await getUserInterests(userEmail));
+          } catch (err) {
+            log.push(`User not found or error for userEmail: ${userEmail}`);
+          }
+        }
+        if (users.length === 0) {
+          res.status(404).json({ error: 'No valid users found in group.' });
+          return;
+        }
+        // For each category, aggregate interests, resolve entities, get Qloo recs
+        const allCategoryResults: any[] = [];
+        for (const catUrn of categories) {
+          // Map urn to type string (e.g., 'urn:entity:artist' -> 'music')
+          let typeKey = Object.keys(RECOMMENDATION_TYPE_TO_ENTITY).find(
+            k => RECOMMENDATION_TYPE_TO_ENTITY[k] === catUrn
+          );
+          if (!typeKey) continue;
+          const interests = aggregateInterests(users, typeKey, log);
+          if (interests.length === 0) continue;
+          const entityIds = await resolveEntities(interests, typeKey, log);
+          if (entityIds.length === 0) continue;
+          const qlooRecs = await getQlooRecommendations(catUrn, entityIds, log);
+          allCategoryResults.push({
+            category: catUrn,
+            type: typeKey,
+            interests,
+            entityIds,
+            qlooRecommendations: qlooRecs
+          });
+        }
+        // Blend all Qloo recs for Gemini
+        const allQlooRecs = allCategoryResults.flatMap(r => r.qlooRecommendations);
+        const gemini = await getGeminiResponse(users, allQlooRecs, 'multi-category', log);
+        res.json({
+          groupId,
+          categories,
+          allCategoryResults,
+          gemini,
+          debugLog: log,
+        });
+        return;
+      } catch (err) {
+        log.push(`Error in multi-category: ${err.message || err}`);
         res.status(500).json({ error: err.message || 'Internal server error', debugLog: log });
         return;
       }

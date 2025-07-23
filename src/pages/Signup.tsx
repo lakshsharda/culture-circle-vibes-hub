@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,23 +22,18 @@ const Signup = ({ onSignup }: SignupProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
   
+  // Update formData to store array of { name, id } objects for each interest
   const [formData, setFormData] = useState({
-    // Step 1: Basic Info
     fullName: "",
     email: "",
     password: "",
-    
-    // Step 2: Your Vibes
-    musicArtists: [] as string[],
-    movies: [] as string[],
-    books: [] as string[],
-    
-    // Step 3: Your Tastes
-    travelDestinations: [] as string[],
-    cuisines: [] as string[],
-    tvShows: [] as string[],
-    
-    // Step 4: Your Intent
+    musicArtists: [] as { name: string; id: string }[],
+    movies: [] as { name: string; id: string }[],
+    books: [] as { name: string; id: string }[],
+    travelDestinations: [] as { name: string; id: string }[],
+    cuisines: [] as { name: string; id: string }[],
+    tvShows: [] as { name: string; id: string }[],
+    videoGames: [] as { name: string; id: string }[],
     recommendationType: "",
     vibeDescription: ""
   });
@@ -49,6 +44,7 @@ const Signup = ({ onSignup }: SignupProps) => {
   const [travelInput, setTravelInput] = useState("");
   const [cuisineInput, setCuisineInput] = useState("");
   const [tvShowInput, setTvShowInput] = useState("");
+  const [videoGameInput, setVideoGameInput] = useState("");
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -62,26 +58,28 @@ const Signup = ({ onSignup }: SignupProps) => {
     }
   };
 
-  const handleAddToArray = (field: keyof typeof formData, value: string) => {
-    if (value.trim() && Array.isArray(formData[field])) {
+  // Update handleAddToArray to accept { name, id }
+  const handleAddToArray = (field: keyof typeof formData, value: { name: string; id: string }) => {
+    if (value.name.trim() && Array.isArray(formData[field])) {
       setFormData(prev => ({
         ...prev,
-        [field]: [...(prev[field] as string[]), value.trim()]
+        [field]: [...(prev[field] as { name: string; id: string }[]), value]
       }));
-      // Clear input for the specific field
       if (field === "musicArtists") setMusicArtistInput("");
       if (field === "movies") setMovieInput("");
       if (field === "books") setBookInput("");
       if (field === "travelDestinations") setTravelInput("");
       if (field === "cuisines") setCuisineInput("");
       if (field === "tvShows") setTvShowInput("");
+      if (field === "videoGames") setVideoGameInput("");
     }
   };
 
+  // Update handleRemoveFromArray for new structure
   const handleRemoveFromArray = (field: keyof typeof formData, index: number) => {
     setFormData(prev => ({
       ...prev,
-      [field]: (prev[field] as string[]).filter((_, i) => i !== index)
+      [field]: (prev[field] as { name: string; id: string }[]).filter((_, i) => i !== index)
     }));
   };
 
@@ -120,7 +118,7 @@ const Signup = ({ onSignup }: SignupProps) => {
     }
   };
 
-  // Validation for each step
+  // Update validation for new structure
   const isStepValid = () => {
     if (currentStep === 1) {
       return (
@@ -140,7 +138,8 @@ const Signup = ({ onSignup }: SignupProps) => {
       return (
         formData.travelDestinations.length > 0 &&
         formData.cuisines.length > 0 &&
-        formData.tvShows.length > 0
+        formData.tvShows.length > 0 &&
+        formData.videoGames.length > 0
       );
     }
     if (currentStep === 4) {
@@ -256,8 +255,8 @@ const Signup = ({ onSignup }: SignupProps) => {
                   onRemove={(index) => handleRemoveFromArray("musicArtists", index)}
                   currentInput={musicArtistInput}
                   setCurrentInput={setMusicArtistInput}
+                  qlooType="artist"
                 />
-                
                 <MultiSelectInput
                   label="Favorite Movies"
                   placeholder="Add a movie (e.g., Inception, The Godfather)"
@@ -266,8 +265,8 @@ const Signup = ({ onSignup }: SignupProps) => {
                   onRemove={(index) => handleRemoveFromArray("movies", index)}
                   currentInput={movieInput}
                   setCurrentInput={setMovieInput}
+                  qlooType="movie"
                 />
-                
                 <MultiSelectInput
                   label="Favorite Books"
                   placeholder="Add a book (e.g., 1984, Harry Potter)"
@@ -276,6 +275,7 @@ const Signup = ({ onSignup }: SignupProps) => {
                   onRemove={(index) => handleRemoveFromArray("books", index)}
                   currentInput={bookInput}
                   setCurrentInput={setBookInput}
+                  qlooType="book"
                 />
               </div>
             )}
@@ -291,8 +291,8 @@ const Signup = ({ onSignup }: SignupProps) => {
                   onRemove={(index) => handleRemoveFromArray("travelDestinations", index)}
                   currentInput={travelInput}
                   setCurrentInput={setTravelInput}
+                  qlooType="destination"
                 />
-                
                 <MultiSelectInput
                   label="Favorite Foods/Cuisines"
                   placeholder="Add a cuisine (e.g., Italian, Sushi)"
@@ -301,8 +301,8 @@ const Signup = ({ onSignup }: SignupProps) => {
                   onRemove={(index) => handleRemoveFromArray("cuisines", index)}
                   currentInput={cuisineInput}
                   setCurrentInput={setCuisineInput}
+                  qlooType="place"
                 />
-                
                 <MultiSelectInput
                   label="Favorite TV Shows or Fashion Brands"
                   placeholder="Add a show or brand (e.g., Breaking Bad, Nike)"
@@ -311,6 +311,17 @@ const Signup = ({ onSignup }: SignupProps) => {
                   onRemove={(index) => handleRemoveFromArray("tvShows", index)}
                   currentInput={tvShowInput}
                   setCurrentInput={setTvShowInput}
+                  qlooType="tv_show"
+                />
+                <MultiSelectInput
+                  label="Favorite Video Games"
+                  placeholder="Add a video game (e.g., The Legend of Zelda, Fortnite)"
+                  items={formData.videoGames}
+                  onAdd={(value) => handleAddToArray("videoGames", value)}
+                  onRemove={(index) => handleRemoveFromArray("videoGames", index)}
+                  currentInput={videoGameInput}
+                  setCurrentInput={setVideoGameInput}
+                  qlooType="video_game"
                 />
               </div>
             )}
@@ -390,26 +401,53 @@ const Signup = ({ onSignup }: SignupProps) => {
   );
 };
 
-// Multi-select input component
+// Qloo Autocomplete Hook
+function useQlooAutocomplete(query: string, type: string) {
+  const [suggestions, setSuggestions] = useState<{ name: string; id: string }[]>([]);
+  useEffect(() => {
+    if (!query) return;
+    const timeout = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://hackathon.api.qloo.com/search?query=${encodeURIComponent(query)}&types=${type}`,
+          { headers: { 'x-api-key': import.meta.env.VITE_QLOO_API_KEY } }
+        );
+        const data = await res.json();
+        setSuggestions(
+          (data.results || []).map((item: any) => ({ name: item.name, id: item.id }))
+        );
+      } catch {
+        setSuggestions([]);
+      }
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [query, type]);
+  return suggestions;
+}
+
 interface MultiSelectInputProps {
   label: string;
   placeholder: string;
-  items: string[];
-  onAdd: (value: string) => void;
+  items: { name: string; id: string }[];
+  onAdd: (value: { name: string; id: string }) => void;
   onRemove: (index: number) => void;
   currentInput: string;
   setCurrentInput: (value: string) => void;
+  qlooType: string;
 }
 
-const MultiSelectInput = ({ 
-  label, 
-  placeholder, 
-  items, 
-  onAdd, 
-  onRemove, 
-  currentInput, 
-  setCurrentInput
+const MultiSelectInput = ({
+  label,
+  placeholder,
+  items,
+  onAdd,
+  onRemove,
+  currentInput,
+  setCurrentInput,
+  qlooType
 }: MultiSelectInputProps) => {
+  const suggestions = useQlooAutocomplete(currentInput, qlooType);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   return (
     <div>
       <Label>{label}</Label>
@@ -419,32 +457,50 @@ const MultiSelectInput = ({
             value={currentInput}
             onChange={(e) => {
               setCurrentInput(e.target.value);
+              setShowSuggestions(true);
             }}
-            onKeyPress={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                onAdd(currentInput);
-              }
-            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
             placeholder={placeholder}
+            autoComplete="off"
           />
           <Button
             type="button"
             variant="warm-outline"
-            onClick={() => onAdd(currentInput)}
+            onClick={() => {
+              if (currentInput.trim()) {
+                onAdd({ name: currentInput, id: "" });
+                setShowSuggestions(false);
+              }
+            }}
           >
             Add
           </Button>
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute left-0 top-full z-10 w-full bg-white border border-border rounded shadow-lg mt-1 max-h-40 overflow-auto">
+              {suggestions.map((s, idx) => (
+                <div
+                  key={s.id}
+                  className="px-3 py-2 cursor-pointer hover:bg-accent"
+                  onMouseDown={() => {
+                    onAdd(s);
+                    setShowSuggestions(false);
+                  }}
+                >
+                  {s.name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        
         {items.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {items.map((item, index) => (
               <span
-                key={index}
+                key={item.id + index}
                 className="inline-flex items-center gap-1 bg-accent text-accent-foreground px-3 py-1 rounded-full text-sm"
               >
-                {item}
+                {item.name}
                 <button
                   type="button"
                   onClick={() => onRemove(index)}
