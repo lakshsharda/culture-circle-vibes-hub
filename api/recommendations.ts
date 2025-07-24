@@ -205,9 +205,7 @@ async function getQlooRecommendations(entityType: string, entityIds: string[], l
 
 // Helper: Call Gemini API
 async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: string, log: string[]): Promise<{ recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; }> {
-  const prompt = `You are CultureCircle AI, an expert cultural concierge and vibe curator. Your specialty is crafting unique, delightful, and memorable shared experiences for groups, even when their tastes are wildly different.
-
-Analyze the following group's cultural preferences and the data-driven recommendations from our backend.
+  const prompt = `You are CultureCircle AI, an expert in crafting memorable group experiences for hackathons. Given these group interests and data-driven recommendations:
 
 Group Preferences (JSON):
 ${JSON.stringify(users, null, 2)}
@@ -215,34 +213,25 @@ ${JSON.stringify(users, null, 2)}
 Initial Recommendations (JSON):
 ${JSON.stringify(qlooRecs, null, 2)}
 
-Your task is to transform this raw data into a truly inspired suggestion. Please do the following:
+Your task:
+1. Design a group activity or event that thoughtfully combines only these interests. Be creative and lively, but do not introduce unrelated ideas. Describe the activity in a way that feels fun, engaging, and tailored for a group. Use lively, event-host language.
+2. Add a short "Why this works" section explaining how the interests come together.
+3. Assign a "Harmony Score" (0–100) that reflects how well these interests blend for a group experience. Briefly justify the score.
+4. Suggest one alternative idea, also strictly based on the provided interests.
 
-1.  **Craft a Compelling Recommendation:**
-    *   Instead of just one idea, propose a main recommendation and maybe a "wild card" alternative.
-    *   Be specific and evocative. For a movie night, don't just say "watch a comedy." Suggest a specific film, explain *why* it bridges the group's tastes (e.g., "it has the witty dialogue User A loves and the heartwarming moments User B enjoys"), and maybe even suggest a themed snack or drink.
-    *   For a dinner, don't just name a cuisine. Describe the atmosphere. Suggest a type of restaurant or even a recipe if they were to cook at home.
-    *   Think outside the box! Could their love for different things be combined? (e.g., "A historical fiction book set in a travel destination one of them loves").
-
-2.  **Calculate a "Harmony Score" (0-100):**
-    *   This score should reflect the potential for a shared good time, not just data overlap. A low score might mean the tastes are very different, but your creative recommendation can still make for a high-harmony experience.
-
-3.  **Write the "Vibe Analysis":**
-    *   This is the most important part. Explain your reasoning for the recommendation and the score.
-    *   Frame the group's dynamic positively. Instead of "they have nothing in common," say "this group has a wonderfully eclectic mix of tastes, which opens up exciting possibilities."
-    *   Explain *how* your recommendation bridges their interests and creates a new, shared experience. Highlight the "why" behind your suggestion.
-
-**Output Format:**
-Return your answer as a single, clean JSON object with the following keys:
-- \`recommendation\`: (string) Your main, detailed recommendation.
-- \`alternative\`: (string) A creative alternative suggestion.
-- \`harmonyScore\`: (number) The 0-100 score.
-- \`vibeAnalysis\`: (string) Your detailed explanation and reasoning.
+Format your response as a single JSON object with these keys:
+- recommendation: (string) The main, detailed group activity or event.
+- whyThisWorks: (string) Short explanation of why the activity fits the group.
+- alternative: (string) A creative alternative suggestion.
+- harmonyScore: (number) The 0-100 score with a short justification.
 `;
   log.push(`Gemini prompt: ${prompt}`);
   const resp = await axios.post(
     `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
     {
       contents: [{ parts: [{ text: prompt }] }],
+      // If Gemini API supports temperature, set it here for moderate creativity
+      // temperature: 0.7,
     }
   );
   // Try to extract JSON from Gemini response
@@ -258,7 +247,8 @@ Return your answer as a single, clean JSON object with the following keys:
       recommendation = parsed.recommendation || '';
       alternative = parsed.alternative || '';
       harmonyScore = parsed.harmonyScore || 0;
-      vibeAnalysis = parsed.vibeAnalysis || '';
+      // Accept either 'whyThisWorks' or 'vibeAnalysis' for compatibility
+      vibeAnalysis = parsed.whyThisWorks || parsed.vibeAnalysis || '';
     } else {
       recommendation = text;
       vibeAnalysis = 'Could not parse structured reasoning.';

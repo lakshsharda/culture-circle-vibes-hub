@@ -436,13 +436,13 @@ interface MultiSelectInputProps {
   qlooType: string;
 }
 
-const MultiSelectInput = ({
-  label,
-  placeholder,
-  items,
-  onAdd,
-  onRemove,
-  currentInput,
+const MultiSelectInput = ({ 
+  label, 
+  placeholder, 
+  items, 
+  onAdd, 
+  onRemove, 
+  currentInput, 
   setCurrentInput,
   qlooType
 }: MultiSelectInputProps) => {
