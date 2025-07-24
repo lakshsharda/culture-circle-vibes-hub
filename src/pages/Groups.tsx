@@ -272,19 +272,19 @@ const Groups = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-accent py-8 px-6">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#f8fafc] via-[#e0e7ff] to-[#f0fdfa] dark:from-[#18181b] dark:via-[#23272f] dark:to-[#1e293b] py-8 px-6 flex flex-col">
       <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-5xl font-extrabold text-primary mb-2 drop-shadow-lg">Group Management</h1>
-          <p className="text-xl text-muted-foreground">
+          <h1 className="text-5xl font-extrabold text-primary mb-2 drop-shadow-lg animate-fade-in-up">Group Management</h1>
+          <p className="text-xl text-muted-foreground animate-fade-in-up">
             Manage all your cultural groups, members, and settings in one place.
           </p>
         </div>
         <div className="grid lg:grid-cols-3 gap-8">
           {/* My Groups Section */}
           <section className="lg:col-span-2">
-            <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
+            <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl rounded-2xl animate-fade-in-up">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-primary animate-float" />
@@ -292,7 +292,7 @@ const Groups = () => {
                 </CardTitle>
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="warm" size="sm">
+                    <Button variant="warm" size="sm" className="shadow-lg animate-float">
                       <Plus className="h-4 w-4 mr-2" />
                       Create Group
                     </Button>
@@ -364,7 +364,7 @@ const Groups = () => {
               </CardHeader>
               <CardContent>
                 {groups.length === 0 ? (
-                  <div className="text-center py-12">
+                  <div className="text-center py-12 animate-fade-in-up">
                     <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-float" />
                     <p className="text-muted-foreground mb-4">No groups yet</p>
                     <p className="text-sm text-muted-foreground">Create your first group to get started!</p>
@@ -372,14 +372,14 @@ const Groups = () => {
                 ) : (
                   <div className="space-y-6">
                     {groups.map((group) => (
-                      <Card key={group.id} className="bg-gradient-to-br from-secondary/30 via-accent/10 to-card/80 border-0 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105">
+                      <Card key={group.id} className="bg-gradient-to-br from-secondary/30 via-accent/10 to-card/80 border-0 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 animate-fade-in-up">
                         <CardContent className="p-6">
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-2">
                                 <h3 className="text-xl font-bold text-foreground drop-shadow-lg">{group.name}</h3>
                                 {group.isOwner && (
-                                  <Badge variant="secondary" className="flex items-center gap-1">
+                                  <Badge variant="secondary" className="flex items-center gap-1 animate-float">
                                     <Crown className="h-3 w-3" />
                                     Owner
                                   </Badge>
@@ -397,6 +397,7 @@ const Groups = () => {
                                 variant="ghost"
                                 onClick={() => openUpdateDialog(group)}
                                 disabled={!group.isOwner}
+                                className="hover:bg-primary/10"
                               >
                                 <Edit3 className="h-4 w-4" />
                               </Button>
@@ -405,7 +406,7 @@ const Groups = () => {
                                 variant="ghost"
                                 onClick={() => handleDeleteGroup(group.id, group.name)}
                                 disabled={!group.isOwner}
-                                className="text-destructive hover:text-destructive"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -419,7 +420,7 @@ const Groups = () => {
                               </p>
                               <div className="flex flex-wrap gap-2">
                                 {group.members.slice(0, 4).map((member, index) => (
-                                  <div key={index} className="flex items-center gap-2">
+                                  <div key={index} className="flex items-center gap-2 animate-float">
                                     <Avatar className="w-8 h-8 border-2 border-primary/40 shadow-md">
                                       <AvatarImage src="" />
                                       <AvatarFallback className="text-xs">
@@ -447,6 +448,7 @@ const Groups = () => {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => copyInviteCode(group.inviteCode)}
+                                  className="hover:bg-primary/10"
                                 >
                                   <Share2 className="h-4 w-4" />
                                 </Button>
@@ -474,6 +476,7 @@ const Groups = () => {
                                       size="sm"
                                       variant="warm-outline"
                                       onClick={() => setSelectedGroup(group)}
+                                      className="animate-float"
                                     >
                                       <UserPlus className="h-4 w-4 mr-1" />
                                       Add Member
@@ -502,7 +505,7 @@ const Groups = () => {
                               )}
                               
                               <Link to="/recommendations">
-                                <Button size="sm" variant="warm">
+                                <Button size="sm" variant="warm" className="animate-float">
                                   <Eye className="h-4 w-4 mr-1" />
                                   Recommendations
                                 </Button>
@@ -522,7 +525,7 @@ const Groups = () => {
           <section>
             <div className="space-y-6">
               {/* Update Group */}
-              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
+              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl rounded-2xl animate-fade-in-up">
                 <CardHeader>
                   <CardTitle className="text-lg">Quick Actions</CardTitle>
                 </CardHeader>
@@ -648,7 +651,7 @@ const Groups = () => {
               </Card>
 
               {/* Group Stats */}
-              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
+              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl rounded-2xl animate-fade-in-up">
                 <CardHeader>
                   <CardTitle className="text-lg">Quick Stats</CardTitle>
                 </CardHeader>

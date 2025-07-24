@@ -370,26 +370,26 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-accent py-8 px-6">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#f8fafc] via-[#e0e7ff] to-[#f0fdfa] dark:from-[#18181b] dark:via-[#23272f] dark:to-[#1e293b] py-10 px-6 flex flex-col">
       <div className="container mx-auto max-w-6xl">
         {/* Header */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-center sm:text-left">
+        <div className="mb-12 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-center sm:text-left">
           <div>
-            <h1 className="text-5xl font-extrabold text-primary mb-2 drop-shadow-lg">Dashboard</h1>
-            <p className="text-xl text-muted-foreground">
+            <h1 className="text-5xl font-extrabold text-primary mb-2 drop-shadow-lg animate-fade-in-up">Dashboard</h1>
+            <p className="text-xl text-muted-foreground animate-fade-in-up">
               Manage your cultural groups and discover new experiences together.
             </p>
           </div>
           <Link to="/edit-profile">
-            <Button variant="warm-outline" className="font-semibold rounded-full px-6 py-2 shadow-md hover:scale-105 transition-transform">
+            <Button variant="warm-outline" className="font-semibold rounded-full px-6 py-2 shadow-md hover:scale-105 transition-transform animate-float">
               Edit Profile
             </Button>
           </Link>
         </div>
         {/* Group Creation & Join Forms */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
           {/* Create Group */}
-          <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
+          <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl rounded-2xl animate-fade-in-up">
             <CardHeader>
               <CardTitle className="text-lg font-bold">Create Group</CardTitle>
             </CardHeader>
@@ -461,7 +461,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           {/* Join Group by Code */}
-          <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
+          <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl rounded-2xl animate-fade-in-up">
             <CardHeader>
               <CardTitle className="text-lg font-bold">Join Group by Code</CardTitle>
             </CardHeader>
@@ -481,8 +481,8 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
-        {/* Add Group Requests section to Dashboard (for owners) */}
-        <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl mb-8">
+        {/* Group Requests section */}
+        <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl rounded-2xl mb-12 animate-fade-in-up">
           <CardHeader>
             <CardTitle className="text-lg font-bold">Group Requests</CardTitle>
           </CardHeader>
@@ -509,8 +509,8 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
-        {/* Add User Group Requests section to Dashboard */}
-        <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl mb-8">
+        {/* User Group Invites section */}
+        <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl rounded-2xl mb-12 animate-fade-in-up">
           <CardHeader>
             <CardTitle className="text-lg font-bold">Your Group Invites</CardTitle>
           </CardHeader>
@@ -537,13 +537,13 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-10 mb-10">
           {/* My Groups Section */}
           <section className="lg:col-span-2">
-            <Card className="bg-gradient-to-br from-secondary/30 via-accent/10 to-card/80 border-0 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300">
+            <Card className="bg-gradient-to-br from-secondary/30 via-accent/10 to-card/80 border-0 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 animate-fade-in-up">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
+                  <Users className="h-5 w-5 text-primary animate-float" />
                   My Groups ({groups.length})
                 </CardTitle>
               </CardHeader>
@@ -708,10 +708,10 @@ const Dashboard = () => {
           <section>
             <div className="space-y-6">
               {/* Quick Stats */}
-              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
+              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl rounded-2xl animate-fade-in-up">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <TrendingUp className="h-5 w-5 text-primary animate-float" />
                     Overview
                   </CardTitle>
                 </CardHeader>
@@ -734,7 +734,7 @@ const Dashboard = () => {
               </Card>
 
               {/* Recent Activity */}
-              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
+              <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl rounded-2xl animate-fade-in-up">
                 <CardHeader>
                   <CardTitle className="text-lg">Recent Activity</CardTitle>
                 </CardHeader>

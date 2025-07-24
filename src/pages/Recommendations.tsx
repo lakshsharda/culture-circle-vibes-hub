@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send, RefreshCw, Save, Copy, Sparkles, Users } from "lucide-react";
+import { Send, RefreshCw, Save, Copy, Sparkles, Users, Trash2, PlusCircle, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { callGemini } from "@/lib/gemini";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChatMessage {
   id: string;
@@ -48,6 +49,9 @@ const Recommendations = () => {
   const [itineraryDestination, setItineraryDestination] = useState('');
   const [itineraryDays, setItineraryDays] = useState(3);
   const [itineraryResult, setItineraryResult] = useState<any[] | null>(null);
+  const [chatSessions, setChatSessions] = useState<any[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [loadingChat, setLoadingChat] = useState(false);
 
   // Mock groups data
   // const groups = [
@@ -112,6 +116,72 @@ const Recommendations = () => {
     };
     fetchMembers();
   }, [selectedGroupId, groups]);
+
+  // Load chat sessions from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('cc_chat_sessions');
+    if (saved) {
+      setChatSessions(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save chat sessions to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('cc_chat_sessions', JSON.stringify(chatSessions));
+  }, [chatSessions]);
+
+  // Save current chat to sessions
+  const saveCurrentChat = (title?: string) => {
+    if (loadingChat) return; // Don't save while loading a chat
+    if (messages.length === 0) return;
+    const id = activeChatId || uuidv4();
+    const session = {
+      id,
+      title: title || messages[0]?.content?.slice(0, 30) || 'Untitled',
+      messages,
+      createdAt: new Date().toISOString(),
+      groupId: selectedGroup,
+      categories: selectedCategories,
+    };
+    setChatSessions(prev => {
+      const filtered = prev.filter(s => s.id !== id);
+      return [session, ...filtered];
+    });
+    setActiveChatId(id);
+  };
+
+  // Load a chat session
+  const loadChatSession = (id: string) => {
+    const session = chatSessions.find(s => s.id === id);
+    if (session) {
+      setLoadingChat(true);
+      // Convert timestamps to Date objects if needed
+      const fixedMessages = session.messages.map((msg: any) => ({
+        ...msg,
+        timestamp: typeof msg.timestamp === 'string' ? new Date(msg.timestamp) : msg.timestamp
+      }));
+      setMessages(fixedMessages);
+      setActiveChatId(id);
+      setSelectedGroup(session.groupId);
+      setSelectedCategories(session.categories || []);
+      setTimeout(() => setLoadingChat(false), 100); // allow state to settle
+    }
+  };
+
+  // Start a new chat
+  const startNewChat = () => {
+    setMessages([]);
+    setActiveChatId(null);
+  };
+
+  // Save chat after each message
+  useEffect(() => {
+    if (loadingChat) return; // Don't save while loading a chat
+    if (messages.length > 0) {
+      saveCurrentChat();
+    }
+    // eslint-disable-next-line
+  }, [messages]);
 
   // Helper: Aggregate interests from all members
   const aggregateInterests = () => {
@@ -348,75 +418,113 @@ ${vibeAnalysis}`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-accent py-8 px-6">
-      <div className="container mx-auto max-w-4xl">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-5xl font-extrabold text-primary mb-2 drop-shadow-lg">AI Recommendations</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Get personalized suggestions for your cultural group experiences.
-          </p>
+    <div className="w-full h-screen flex bg-gradient-to-br from-[#f8fafc] via-[#e0e7ff] to-[#f0fdfa] dark:from-[#18181b] dark:via-[#23272f] dark:to-[#1e293b] transition-colors duration-700 overflow-hidden">
+      {/* Sidebar for chat history */}
+      <aside className="fixed left-0 top-0 h-full w-72 z-20 bg-white/70 dark:bg-[#23272f]/80 backdrop-blur-lg border-r border-primary/20 flex flex-col glassy shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/30 bg-gradient-to-r from-primary/10 to-accent/10">
+          <span className="font-extrabold text-lg text-primary tracking-wide flex items-center gap-2">
+            <Sparkles className="h-5 w-5 animate-float text-warm-yellow" /> Chats
+          </span>
+          <Button size="icon" variant="ghost" className="rounded-full hover:bg-primary/10" onClick={startNewChat} title="New Chat">
+            <PlusCircle className="h-6 w-6 text-primary" />
+          </Button>
         </div>
-        <div className="grid gap-6">
-          {/* Group Selection */}
-          <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-xl rounded-2xl">
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Select Group
-                  </label>
-                  <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a group for recommendations" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groups.map((group) => (
-                        <SelectItem key={group.id} value={group.id}>
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            {group.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {selectedGroup && (
-                  <div className="flex gap-2 mt-6 sm:mt-0">
-                    <Button
-                      variant={recommendationMode === 'standard' ? 'warm' : 'outline'}
-                      size="sm"
-                      onClick={() => setRecommendationMode('standard')}
-                      disabled={isGenerating}
-                      className="rounded-full px-6 font-bold shadow-md"
-                    >
-                      Standard
-                    </Button>
-                    <Button
-                      variant={recommendationMode === 'itinerary' ? 'warm' : 'outline'}
-                      size="sm"
-                      onClick={() => setRecommendationMode('itinerary')}
-                      disabled={isGenerating}
-                      className="rounded-full px-6 font-bold shadow-md"
-                    >
-                      Itinerary
-                    </Button>
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {chatSessions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-muted-foreground text-sm gap-4">
+              <Sparkles className="h-10 w-10 animate-float text-warm-yellow/70" />
+              <span>No chats yet. Start a new conversation!</span>
+            </div>
+          ) : (
+            chatSessions.map(session => (
+              <div
+                key={session.id}
+                className={`group p-4 border-b border-border/20 cursor-pointer flex items-center gap-3 hover:bg-accent/20 transition-all ${activeChatId === session.id ? 'bg-accent/30 border-l-4 border-primary/80' : ''}`}
+                onClick={() => loadChatSession(session.id)}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-primary truncate flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    {session.title}
                   </div>
-                )}
+                  <div className="text-xs text-muted-foreground mt-1 truncate">{new Date(session.createdAt).toLocaleString()}</div>
+                </div>
+                <button
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-destructive/10"
+                  title="Delete chat"
+                  onClick={e => { e.stopPropagation(); setChatSessions(prev => prev.filter(s => s.id !== session.id)); }}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/5 via-accent/5 to-warm-yellow/10 animate-gradient-move" />
+      </aside>
+      {/* Main Recommendations UI */}
+      <main className="flex-1 ml-72 h-full flex flex-col items-center justify-start py-8 px-4 md:px-10 relative overflow-y-auto">
+        {/* Animated Logo/Mascot */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary via-warm-yellow to-accent shadow-2xl flex items-center justify-center animate-float mb-2">
+            <Sparkles className="h-12 w-12 text-white animate-pulse" />
+          </div>
+          <h1 className="text-5xl font-extrabold text-primary drop-shadow-lg tracking-tight mb-2">CultureCircle</h1>
+          <p className="text-xl text-muted-foreground max-w-2xl text-center">Get AI-powered, group-based cultural recommendations and plans—beautifully personalized for your vibe.</p>
+        </div>
+        <div className="w-full max-w-4xl grid gap-6">
+          {/* Group & Category Selection */}
+          <Card className="bg-white/80 dark:bg-[#18181b]/80 shadow-xl rounded-2xl border-0 backdrop-blur-md">
+            <CardContent className="p-6 flex flex-col md:flex-row gap-6 items-center">
+              <div className="flex-1 w-full">
+                <label className="block text-sm font-bold text-foreground mb-2">Select Group</label>
+                <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                  <SelectTrigger className="rounded-full border-2 border-primary/30 shadow-sm bg-white/70 dark:bg-[#23272f]/70">
+                    <SelectValue placeholder="Choose a group for recommendations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((group) => (
+                      <SelectItem key={group.id} value={group.id} className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-wrap gap-2 items-center mt-4 md:mt-0">
+                {supportedEntityTypes.map(type => (
+                  <button
+                    key={type.urn}
+                    className={`px-4 py-2 rounded-full font-semibold flex items-center gap-2 shadow-sm border-2 transition-all duration-200 ${selectedCategories.includes(type.urn) ? 'bg-gradient-to-r from-primary via-warm-yellow to-accent text-white border-primary' : 'bg-white/70 dark:bg-[#23272f]/70 border-border text-primary hover:bg-primary/10'}`}
+                    onClick={() => setSelectedCategories(selectedCategories.includes(type.urn) ? selectedCategories.filter(c => c !== type.urn) : [...selectedCategories, type.urn])}
+                    type="button"
+                  >
+                    {type.label === 'Music Artist' && '🎵'}
+                    {type.label === 'Movie' && '🎬'}
+                    {type.label === 'Book' && '📚'}
+                    {type.label === 'Destination' && '🗺️'}
+                    {type.label === 'TV Show' && '📺'}
+                    {type.label === 'Brand' && '👗'}
+                    {type.label === 'Place' && '🍽️'}
+                    {type.label === 'Person' && '🧑'}
+                    {type.label === 'Podcast' && '🎙️'}
+                    {type.label === 'Video Game' && '🎮'}
+                    <span>{type.label}</span>
+                  </button>
+                ))}
               </div>
             </CardContent>
           </Card>
-          {/* Enhanced Chat Interface */}
-          <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl border-0 overflow-hidden rounded-2xl">
+          {/* Chat Area */}
+          <Card className="bg-white/90 dark:bg-[#18181b]/90 shadow-2xl border-0 overflow-hidden rounded-2xl backdrop-blur-md">
             <div className="bg-gradient-to-r from-primary/10 via-warm-orange/10 to-warm-yellow/10 p-4 border-b flex items-center gap-3">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               <span className="font-medium text-foreground">CultureCircle AI Assistant</span>
               <Badge variant="secondary" className="text-xs">Online</Badge>
             </div>
             <CardContent className="p-0">
-              {/* Messages Area */}
-              <ScrollArea className="h-[500px] p-6">
+              <ScrollArea className="h-[500px] p-6 custom-scrollbar">
                 {messages.length === 0 ? (
                   <div className="text-center py-16">
                     <div className="relative mb-6">
@@ -449,16 +557,18 @@ ${vibeAnalysis}`;
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {messages.map((message) => (
+                    {messages.map((message, idx) => (
                       <div
-                        key={message.id}
+                        key={message.id + idx}
                         className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div className={`max-w-[85%] px-5 py-4 shadow-lg rounded-2xl mb-2 ${
+                        <div className={`max-w-[85%] px-5 py-4 shadow-xl rounded-2xl mb-2 transition-all duration-300 ${
                           message.type === 'user'
-                            ? 'bg-gradient-to-br from-primary/80 via-warm-yellow/60 to-accent/60 text-white'
-                            : 'bg-white/90 border border-border text-foreground'
-                        }`}>
+                            ? 'bg-gradient-to-br from-primary/80 via-warm-yellow/60 to-accent/60 text-white animate-fade-in-right'
+                            : 'bg-white/95 border border-border text-foreground animate-fade-in-left'
+                        }`}
+                          style={{ animationDelay: `${idx * 60}ms` }}
+                        >
                           {message.type === 'assistant' && (
                             <div className="flex items-center gap-2 mb-2">
                               <div className="w-6 h-6 bg-button-gradient rounded-full flex items-center justify-center animate-float">
@@ -476,10 +586,9 @@ ${vibeAnalysis}`;
                             message.type === 'user' ? 'text-white' : 'text-muted-foreground'
                           }`}>
                             <span>
-                              {message.timestamp.toLocaleTimeString([], { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
+                              {message.timestamp instanceof Date && !isNaN(message.timestamp as any)
+                                ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                : ''}
                             </span>
                             {message.type === 'assistant' && (
                               <Badge variant="secondary" className="text-xs">
@@ -491,7 +600,7 @@ ${vibeAnalysis}`;
                       </div>
                     ))}
                     {itineraryResult && (
-                      <div className="bg-white/90 border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[85%] mx-auto mt-6">
+                      <div className="bg-white/90 border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[85%] mx-auto mt-6 animate-fade-in-up">
                         <h3 className="text-xl font-bold mb-4 text-primary flex items-center gap-2">
                           <span>🗺️</span> Group Itinerary
                         </h3>
@@ -523,7 +632,7 @@ ${vibeAnalysis}`;
                         <div className="bg-white border border-border rounded-2xl px-5 py-4 shadow-lg max-w-[85%] animate-pulse">
                           <div className="flex items-center gap-3 mb-2">
                             <div className="w-6 h-6 bg-button-gradient rounded-full flex items-center justify-center animate-spin">
-                              <Sparkles className="h-3 w-3 text-white" />
+                              <Loader2 className="h-3 w-3 text-primary" />
                             </div>
                             <span className="text-xs font-medium text-primary">CultureCircle AI</span>
                           </div>
@@ -544,52 +653,6 @@ ${vibeAnalysis}`;
               </ScrollArea>
               {/* Enhanced Input Area */}
               <div className="border-t bg-gradient-to-r from-secondary/30 to-accent/30 p-6">
-                <div className="flex gap-4 mb-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium mb-1">Select Recommendation Categories</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {supportedEntityTypes.map((type) => (
-                        <label key={type.urn} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            value={type.urn}
-                            checked={selectedCategories.includes(type.urn)}
-                            onChange={e => {
-                              if (e.target.checked) {
-                                setSelectedCategories(prev => [...prev, type.urn]);
-                              } else {
-                                setSelectedCategories(prev => prev.filter(cat => cat !== type.urn));
-                              }
-                            }}
-                          />
-                          {type.label}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  {recommendationMode === 'itinerary' && (
-                    <>
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium mb-1">Destination</label>
-                        <Input
-                          value={itineraryDestination}
-                          onChange={e => setItineraryDestination(e.target.value)}
-                          placeholder="e.g. Tokyo"
-                        />
-                      </div>
-                      <div className="w-32">
-                        <label className="block text-sm font-medium mb-1">Days</label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={14}
-                          value={itineraryDays}
-                          onChange={e => setItineraryDays(Number(e.target.value))}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
                 <div className="flex gap-4">
                   <div className="flex-1 relative">
                     <Input
@@ -613,7 +676,7 @@ ${vibeAnalysis}`;
                     className="h-12 px-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-full font-bold"
                   >
                     {isGenerating || qlooLoading ? (
-                      <RefreshCw className="h-5 w-5 animate-spin" />
+                      <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
                       <Send className="h-5 w-5" />
                     )}
@@ -632,7 +695,7 @@ ${vibeAnalysis}`;
             </CardContent>
           </Card>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

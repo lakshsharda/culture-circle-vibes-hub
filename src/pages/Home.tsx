@@ -27,9 +27,9 @@ const Home = ({ isAuthenticated }: HomeProps) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-accent relative overflow-x-hidden">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#f8fafc] via-[#e0e7ff] to-[#f0fdfa] dark:from-[#18181b] dark:via-[#23272f] dark:to-[#1e293b] relative overflow-x-hidden flex flex-col">
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-28 px-6 flex flex-col items-center justify-center">
+      <section className="relative overflow-hidden py-32 px-6 flex flex-col items-center justify-center">
         {/* Animated Gradient Background */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute top-0 left-0 w-1/2 h-1/2 bg-gradient-to-br from-primary/30 via-warm-yellow/20 to-accent/20 rounded-full blur-3xl animate-pulse" style={{animationDuration: '6s'}} />
@@ -45,20 +45,20 @@ const Home = ({ isAuthenticated }: HomeProps) => {
         </div>
         <div className="container mx-auto text-center relative z-10">
           <div className="mb-8">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-6 shadow-lg">
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-6 shadow-lg animate-fade-in-down">
               <Sparkles className="h-4 w-4 text-warm-yellow animate-spin-slow" />
               <span className="text-sm font-medium text-foreground">AI-Powered Cultural Recommendations</span>
             </div>
           </div>
-          <h1 className="text-7xl md:text-8xl font-extrabold text-foreground mb-8 leading-tight drop-shadow-xl">
-            Culture<span className="bg-button-gradient bg-clip-text text-transparent animate-gradient-x">Circle</span>
+          <h1 className="text-7xl md:text-8xl font-extrabold text-foreground mb-8 leading-tight drop-shadow-xl animate-gradient-x">
+            Culture<span className="bg-gradient-to-r from-primary via-warm-yellow to-accent bg-clip-text text-transparent animate-gradient-x">Circle</span>
           </h1>
-          <p className="text-2xl md:text-3xl text-muted-foreground mb-12 max-w-4xl mx-auto leading-relaxed font-light">
+          <p className="text-2xl md:text-3xl text-muted-foreground mb-12 max-w-4xl mx-auto leading-relaxed font-light animate-fade-in-up">
             Where shared tastes turn into <span className="text-primary font-semibold">unforgettable journeys</span>
           </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12 animate-fade-in-up">
             <Link to="/signup">
-              <Button variant="hero" size="xl" className="group shadow-2xl text-lg px-8 py-4 rounded-full font-bold">
+              <Button variant="hero" size="xl" className="group shadow-2xl text-lg px-8 py-4 rounded-full font-bold animate-float">
                 <Sparkles className="mr-2 h-5 w-5 animate-pulse" />
                 Start Your Journey
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -77,7 +77,7 @@ const Home = ({ isAuthenticated }: HomeProps) => {
             </Link>
           </div>
           {!isAuthenticated && (
-            <p className="text-sm text-muted-foreground mt-8 opacity-75">
+            <p className="text-sm text-muted-foreground mt-8 opacity-75 animate-fade-in-up">
               * Dashboard access requires authentication
             </p>
           )}
@@ -87,16 +87,16 @@ const Home = ({ isAuthenticated }: HomeProps) => {
       <section className="py-20 px-6">
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-extrabold text-primary mb-4 drop-shadow-lg">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-primary mb-4 drop-shadow-lg animate-fade-in-up">
               How It Works
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto animate-fade-in-up">
               Three simple steps to discover amazing experiences with your cultural community.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {howItWorksSteps.map((step, index) => (
-              <Card key={index} className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-105 border-0 relative overflow-hidden group">
+              <Card key={index} className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-105 border-0 relative overflow-hidden group animate-fade-in-up">
                 <CardContent className="text-center p-0 relative z-10">
                   <div className="mb-8">
                     <div className="w-20 h-20 bg-button-gradient rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300 animate-float">
@@ -123,16 +123,16 @@ const Home = ({ isAuthenticated }: HomeProps) => {
         </div>
       </section>
       {/* CTA Section */}
-      <section className="py-16 px-6 bg-gradient-to-r from-secondary to-accent">
+      <section className="py-16 px-6 bg-gradient-to-r from-secondary to-accent animate-gradient-move">
         <div className="container mx-auto text-center">
-          <h3 className="text-3xl font-bold text-foreground mb-6 drop-shadow-lg">
+          <h3 className="text-3xl font-bold text-foreground mb-6 drop-shadow-lg animate-fade-in-up">
             Ready to build your cultural community?
           </h3>
-          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-in-up">
             Join thousands of users who have discovered amazing experiences through shared cultural interests.
           </p>
           <Link to="/signup">
-            <Button variant="warm" size="xl" className="group text-lg px-8 py-4 rounded-full font-bold shadow-xl">
+            <Button variant="warm" size="xl" className="group text-lg px-8 py-4 rounded-full font-bold shadow-xl animate-float">
               Get Started Today
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
@@ -140,7 +140,7 @@ const Home = ({ isAuthenticated }: HomeProps) => {
         </div>
       </section>
       {/* Footer */}
-      <footer className="bg-card py-12 px-6 border-t mt-12">
+      <footer className="bg-card/80 py-12 px-6 border-t mt-12 shadow-inner backdrop-blur-md animate-fade-in-up">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
