@@ -52,6 +52,14 @@ const Recommendations = () => {
   const [chatSessions, setChatSessions] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [loadingChat, setLoadingChat] = useState(false);
+  const [popularityMin, setPopularityMin] = useState<number | undefined>();
+  const [popularityMax, setPopularityMax] = useState<number | undefined>();
+  const [yearMin, setYearMin] = useState<number | undefined>();
+  const [yearMax, setYearMax] = useState<number | undefined>();
+  const [countryCode, setCountryCode] = useState<string>("");
+  const [selectedTags, setSelectedTags] = useState<{ id: string; name: string }[]>([]);
+  const [tagSearch, setTagSearch] = useState<string>("");
+  const [tagSuggestions, setTagSuggestions] = useState<{ id: string; name: string }[]>([]);
 
   // Mock groups data
   // const groups = [
@@ -301,13 +309,13 @@ const Recommendations = () => {
         setIsGenerating(false);
         return;
       }
-      // Multi-category recommendation
+      // Multi-category recommendation (no filters)
       const res = await fetch('/api/recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           groupId: selectedGroup,
-          categories: selectedCategories,
+          categories: selectedCategories
         })
       });
 
@@ -478,20 +486,20 @@ ${vibeAnalysis}`;
             <CardContent className="p-6 flex flex-col md:flex-row gap-6 items-center">
               <div className="flex-1 w-full">
                 <label className="block text-sm font-bold text-foreground mb-2">Select Group</label>
-                <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                  <Select value={selectedGroup} onValueChange={setSelectedGroup}>
                   <SelectTrigger className="rounded-full border-2 border-primary/30 shadow-sm bg-white/70 dark:bg-[#23272f]/70">
-                    <SelectValue placeholder="Choose a group for recommendations" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((group) => (
+                      <SelectValue placeholder="Choose a group for recommendations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {groups.map((group) => (
                       <SelectItem key={group.id} value={group.id} className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                            <Users className="h-4 w-4" />
+                            {group.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               <div className="flex flex-wrap gap-2 items-center mt-4 md:mt-0">
                 {supportedEntityTypes.map(type => (
                   <button
@@ -519,10 +527,10 @@ ${vibeAnalysis}`;
           {/* Chat Area */}
           <Card className="bg-white/90 dark:bg-[#18181b]/90 shadow-2xl border-0 overflow-hidden rounded-2xl backdrop-blur-md">
             <div className="bg-gradient-to-r from-primary/10 via-warm-orange/10 to-warm-yellow/10 p-4 border-b flex items-center gap-3">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="font-medium text-foreground">CultureCircle AI Assistant</span>
-              <Badge variant="secondary" className="text-xs">Online</Badge>
-            </div>
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="font-medium text-foreground">CultureCircle AI Assistant</span>
+                <Badge variant="secondary" className="text-xs">Online</Badge>
+              </div>
             <CardContent className="p-0">
               <ScrollArea className="h-[500px] p-6 custom-scrollbar">
                 {messages.length === 0 ? (
