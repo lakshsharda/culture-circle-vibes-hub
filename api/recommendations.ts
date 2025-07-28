@@ -155,68 +155,65 @@ function aggregateInterests(users: UserInterests[], type: string, log: string[])
   return finalInterests;
 }
 
-// Helper: Resolve interest names to Qloo entity IDs
+// Helper: Resolve interest names to Qloo entity IDs (optimized)
 async function resolveEntities(interests: string[], type: string, log: string[]): Promise<string[]> {
   const entityIds: string[] = [];
-  for (const interest of interests) {
+  
+  // Limit to top 3 interests to reduce API calls
+  const limitedInterests = interests.slice(0, 3);
+  
+  // Make parallel API calls for faster response
+  const searchPromises = limitedInterests.map(async (interest) => {
     try {
       const searchUrl = `https://hackathon.api.qloo.com/search`;
       const resp = await axios.get(searchUrl, {
         params: { query: interest },
         headers: { 'x-api-key': QLOO_API_KEY },
+        timeout: 5000, // 5 second timeout
       });
 
-      log.push(`RAW QLOO RESPONSE for '${interest}': ${JSON.stringify(resp.data)}`);
-
       if (resp.data && Array.isArray(resp.data.results) && resp.data.results.length > 0) {
-        let foundId = null;
-        for (const result of resp.data.results) {
-          log.push(`INSPECTING RESULT for '${interest}': ${JSON.stringify(result)}`);
-          if (result && result.entity_id) {
-            foundId = result.entity_id;
-            log.push(`FOUND ID for '${interest}' in result.entity_id`);
-            break;
-          }
-          if (result && result.qloo && result.qloo.id) {
-            foundId = result.qloo.id;
-            log.push(`FOUND ID for '${interest}' in result.qloo.id`);
-            break;
-          }
-          if (result && result.id) {
-            foundId = result.id;
-            log.push(`FOUND ID for '${interest}' in result.id`);
-            break;
-          }
-        }
-
+        const result = resp.data.results[0]; // Take first result only
+        const foundId = result.entity_id || result.qloo?.id || result.id;
+        
         if (foundId) {
-          entityIds.push(foundId);
           log.push(`SUCCESS: Resolved '${interest}' to ID: ${foundId}`);
-        } else {
-          log.push(`FAILURE: No valid ID found for '${interest}' in any results.`);
+          return foundId;
         }
-      } else {
-        log.push(`No search results array for interest: '${interest}'`);
       }
+      return null;
     } catch (err) {
-      const errorMessage = err.response ? JSON.stringify(err.response.data) : err.message;
-      log.push(`AXIOS ERROR for interest '${interest}': ${errorMessage}`);
+      log.push(`AXIOS ERROR for interest '${interest}': ${err.message}`);
+      return null;
     }
-  }
-  return entityIds;
+  });
+
+  // Wait for all searches to complete
+  const results = await Promise.all(searchPromises);
+  const validIds = results.filter(id => id !== null);
+  
+  log.push(`Resolved ${validIds.length} out of ${limitedInterests.length} interests`);
+  return validIds;
 }
 
-// Helper: Get Qloo recommendations with advanced filters
+// Helper: Get Qloo recommendations (optimized)
 async function getQlooRecommendations(entityType: string, entityIds: string[], log: string[], filters: any = {}): Promise<any[]> {
+  if (entityIds.length === 0) {
+    log.push(`No entity IDs provided for ${entityType}`);
+    return [];
+  }
+  
   // Build params based on entity type and provided filters
   const params: Record<string, any> = {
     'filter.type': entityType,
     'signal.interests.entities': entityIds.join(','),
-    take: 5,
+    take: 3, // Reduced from 5 to 3 for faster response
   };
+  
   // Popularity
   if (filters.popularityMin !== undefined) params['filter.popularity.min'] = filters.popularityMin;
   if (filters.popularityMax !== undefined) params['filter.popularity.max'] = filters.popularityMax;
+  
   // Year (for movies, books, tv_show, video_game)
   if (['urn:entity:movie', 'urn:entity:book', 'urn:entity:tv_show', 'urn:entity:video_game'].includes(entityType)) {
     if (filters.yearMin !== undefined) {
@@ -228,30 +225,180 @@ async function getQlooRecommendations(entityType: string, entityIds: string[], l
       if (entityType === 'urn:entity:book') params['filter.publication_year.max'] = filters.yearMax;
     }
   }
+  
   // Country/location (for place, destination)
   if (filters.countryCode && (entityType === 'urn:entity:place' || entityType === 'urn:entity:destination')) {
     params['filter.geocode.country_code'] = filters.countryCode;
   }
+  
   // Tags
   if (filters.tagIds && Array.isArray(filters.tagIds) && filters.tagIds.length > 0) {
     params['signal.interests.tags'] = filters.tagIds.join(',');
   }
+  
   try {
     const resp = await axios.get(`${QLOO_BASE_URL}/insights`, {
       params,
       headers: { 'x-api-key': QLOO_API_KEY },
+      timeout: 8000, // 8 second timeout
     });
-    log.push(`Qloo insights call params: ${JSON.stringify(params)}`);
-    log.push(`Qloo insights response: ${JSON.stringify(resp.data?.data || [])}`);
+    
+    log.push(`Qloo returned ${resp.data?.data?.length || 0} recommendations for ${entityType}`);
     return resp.data?.data || [];
   } catch (err) {
-    const errorMessage = err.response ? JSON.stringify(err.response.data) : err.message;
-    log.push(`Error calling Qloo insights: ${errorMessage}`);
+    log.push(`QLOO INSIGHTS ERROR for ${entityType}: ${err.message}`);
     return [];
   }
 }
 
-// Helper: Call Gemini API
+// Helper: Get instant recommendation (no API calls)
+function getInstantRecommendation(users: UserInterests[], categories: string[], type: string): { recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; } | null {
+  // Extract top interests from users
+  const allInterests = users.flatMap(u => [
+    ...(u.musicArtists?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name) || []),
+    ...(u.movies?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name) || []),
+    ...(u.cuisines?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name) || []),
+    ...(u.travelDestinations?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name) || [])
+  ]).filter(Boolean);
+
+  if (allInterests.length === 0) return null;
+
+  // Pre-cached responses for common scenarios
+  const responses = {
+    'music': {
+      recommendation: `🎵 Create a collaborative playlist featuring ${allInterests.slice(0, 3).join(', ')} and similar artists. Perfect for your group's diverse music tastes!`,
+      whyThisWorks: `This playlist combines everyone's favorite genres and artists, creating a mix that appeals to all group members.`,
+      alternative: `🎧 Try a music discovery session where each person shares one song and explains why they love it.`,
+      harmonyScore: 85
+    },
+    'movie': {
+      recommendation: `🎬 Host a movie night featuring films similar to ${allInterests.slice(0, 3).join(', ')}. Set up a cozy viewing area with themed snacks!`,
+      whyThisWorks: `These movie choices reflect the group's shared taste in genres and storytelling styles.`,
+      alternative: `📺 Create a movie marathon with films that blend everyone's favorite genres and themes.`,
+      harmonyScore: 80
+    },
+    'restaurant': {
+      recommendation: `🍽️ Plan a food adventure trying restaurants that serve ${allInterests.slice(0, 3).join(', ')} cuisines. Make it a progressive dinner!`,
+      whyThisWorks: `This culinary journey satisfies everyone's taste preferences while creating a fun group experience.`,
+      alternative: `👨‍🍳 Organize a potluck where everyone brings a dish from their favorite cuisine.`,
+      harmonyScore: 90
+    },
+    'travel': {
+      recommendation: `✈️ Plan a trip to destinations that offer experiences related to ${allInterests.slice(0, 3).join(', ')}. Research activities everyone will enjoy!`,
+      whyThisWorks: `These destinations align with the group's travel interests and preferences for experiences.`,
+      alternative: `🗺️ Create a virtual travel experience exploring these destinations through food, music, and culture.`,
+      harmonyScore: 85
+    },
+    'multi-category': {
+      recommendation: `🎉 Organize a themed event that combines ${allInterests.slice(0, 3).join(', ')}. Create stations for different activities!`,
+      whyThisWorks: `This multi-faceted approach ensures everyone finds something they love while trying new things.`,
+      alternative: `🎪 Host a cultural exchange night where each person shares something from their interests.`,
+      harmonyScore: 88
+    }
+  };
+
+  return responses[type] || null;
+}
+
+// Helper: Call Gemini API (ULTRA FAST mode - minimal processing)
+async function getGeminiResponseUltraFast(users: UserInterests[], categories: string[], type: string, log: string[]): Promise<{ recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; }> {
+  // Map type to specific category focus
+  const categoryFocus = {
+    'music': 'music artists and songs',
+    'movie': 'movies and films', 
+    'restaurant': 'restaurants and dining experiences',
+    'travel': 'travel destinations and experiences',
+    'multi-category': 'the selected categories'
+  };
+  
+  const focus = categoryFocus[type] || type;
+  
+  // ULTRA FAST: Minimal prompt with only essential data
+  const userInterests = users.map(u => ({
+    music: u.musicArtists?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name),
+    movies: u.movies?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name),
+    cuisines: u.cuisines?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name),
+    travel: u.travelDestinations?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name)
+  })).filter(u => u.music?.length || u.movies?.length || u.cuisines?.length || u.travel?.length);
+
+  const prompt = `Create a ${focus} recommendation for this group. Interests: ${JSON.stringify(userInterests)}. Categories: ${categories.join(', ')}. Respond with JSON: {"recommendation": "specific recommendation", "whyThisWorks": "brief explanation", "alternative": "alternative suggestion", "harmonyScore": 85}`;
+  
+  try {
+    const resp = await axios.post(
+      `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+      {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.5, // Lower temperature for faster, more predictable responses
+          topP: 0.7,
+          topK: 20,
+          maxOutputTokens: 300, // Even shorter responses
+          candidateCount: 1 // Only generate one response
+        }
+      },
+      {
+        timeout: 8000 // Reduced timeout to 8 seconds
+      }
+    );
+    
+    const text = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    log.push(`Raw Gemini response: ${text}`);
+    
+    // Try multiple JSON extraction methods
+    let parsed: any = null;
+    
+    // Method 1: Look for JSON object with regex
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (e) {
+        log.push(`Failed to parse JSON match: ${e.message}`);
+      }
+    }
+    
+    // Method 2: If no JSON found, try parsing the entire response
+    if (!parsed) {
+      try {
+        parsed = JSON.parse(text.trim());
+      } catch (e) {
+        log.push(`Failed to parse entire response as JSON: ${e.message}`);
+      }
+    }
+    
+    // Method 3: If still no JSON, create a fallback response
+    if (!parsed) {
+      log.push(`Could not extract JSON from response, using fallback`);
+      return {
+        recommendation: text || "Could not generate recommendation due to parsing error.",
+        alternative: "Please try again with a different request.",
+        harmonyScore: 50,
+        vibeAnalysis: "Unable to parse AI response properly."
+      };
+    }
+    
+    // Extract values with fallbacks
+    const recommendation = parsed.recommendation || "No recommendation generated.";
+    const alternative = parsed.alternative || "No alternative suggestion provided.";
+    const harmonyScore = typeof parsed.harmonyScore === 'number' ? parsed.harmonyScore : 50;
+    const vibeAnalysis = parsed.whyThisWorks || parsed.vibeAnalysis || "Analysis not available.";
+    
+    log.push(`Successfully parsed: recommendation='${recommendation.substring(0, 50)}...', harmonyScore=${harmonyScore}`);
+    
+    return { recommendation, alternative, harmonyScore, vibeAnalysis };
+    
+  } catch (error) {
+    log.push(`Gemini API error: ${error.message}`);
+    return {
+      recommendation: "Sorry, I couldn't generate a recommendation right now. Please try again.",
+      alternative: "Please try a different request.",
+      harmonyScore: 0,
+      vibeAnalysis: "Error communicating with AI service."
+    };
+  }
+}
+
+// Helper: Call Gemini API (Original version with Qloo data)
 async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: string, log: string[]): Promise<{ recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; }> {
   // Map type to specific category focus
   const categoryFocus = {
@@ -264,33 +411,24 @@ async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: 
   
   const focus = categoryFocus[type] || type;
   
-  const prompt = `You are CultureCircle AI, an expert in crafting ${focus} recommendations for groups. Given these group interests and data-driven recommendations:
+  const prompt = `You are CultureCircle AI, an expert in crafting ${focus} recommendations for groups.
 
-Group Preferences (JSON):
-${JSON.stringify(users, null, 2)}
+Group Interests: ${JSON.stringify(users.map(u => ({ 
+    music: u.musicArtists?.slice(0, 2), 
+    movies: u.movies?.slice(0, 2), 
+    cuisines: u.cuisines?.slice(0, 2),
+    travel: u.travelDestinations?.slice(0, 2)
+  })), null, 2)}
 
-Initial Recommendations (JSON):
-${JSON.stringify(qlooRecs, null, 2)}
+Qloo Recommendations: ${JSON.stringify(qlooRecs.slice(0, 3), null, 2)}
 
-Your task:
-1. Create a ${focus} recommendation that thoughtfully combines only these interests. Focus SPECIFICALLY on ${focus} - do not suggest general activities or events. Be creative and specific.
-2. Add a short "Why this works" section explaining how the ${focus} recommendation fits the group's tastes.
-3. Assign a "Harmony Score" (0–100) that reflects how well these ${focus} interests blend for the group. Briefly justify the score.
-4. Suggest one alternative ${focus} recommendation, also strictly based on the provided interests.
+Create a ${focus} recommendation that combines these interests. Focus ONLY on ${focus}.
 
-IMPORTANT: 
-- Focus ONLY on ${focus}. Do not suggest general activities, events, or other categories.
-- If this is music, suggest specific artists, songs, or playlists.
-- If this is movies, suggest specific films or movie experiences.
-- If this is restaurants, suggest specific dining experiences or cuisines.
-- If this is travel, suggest specific destinations or travel experiences.
-- Respond ONLY with a valid JSON object.
-
-The JSON must have these exact keys:
+Respond with JSON:
 {
-  "recommendation": "The main, detailed ${focus} recommendation",
-  "whyThisWorks": "Short explanation of why this ${focus} recommendation fits the group",
-  "alternative": "An alternative ${focus} suggestion",
+  "recommendation": "Specific ${focus} recommendation",
+  "whyThisWorks": "Brief explanation",
+  "alternative": "Alternative ${focus} suggestion", 
   "harmonyScore": 85
 }`;
   
@@ -304,8 +442,12 @@ The JSON must have these exact keys:
         generationConfig: {
           temperature: 0.7,
           topP: 0.8,
-          topK: 40
+          topK: 40,
+          maxOutputTokens: 500 // Limit response length for faster generation
         }
+      },
+      {
+        timeout: 15000 // 15 second timeout for Gemini
       }
     );
     
@@ -445,7 +587,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // --- Multi-category recommendation ---
+    // --- Multi-category recommendation (EXTREME FAST MODE) ---
     if (Array.isArray(categories) && categories.length > 0) {
       try {
         const memberIds = await getGroupMemberIds(groupId);
@@ -461,45 +603,34 @@ export default async function handler(req, res) {
           res.status(404).json({ error: 'No valid users found in group.' });
           return;
         }
-        // For each category, aggregate interests, resolve entities, get Qloo recs
-        const allCategoryResults: any[] = [];
-        for (const catUrn of categories) {
-          // Map urn to type string (e.g., 'urn:entity:artist' -> 'music')
-          let typeKey = Object.keys(RECOMMENDATION_TYPE_TO_ENTITY).find(
-            k => RECOMMENDATION_TYPE_TO_ENTITY[k] === catUrn
-          );
-          if (!typeKey) continue;
-          const interests = aggregateInterests(users, typeKey, log);
-          if (interests.length === 0) continue;
-          const entityIds = await resolveEntities(interests, typeKey, log);
-          if (entityIds.length === 0) continue;
-          const qlooRecs = await getQlooRecommendations(catUrn, entityIds, log, filters);
-          allCategoryResults.push({
-            category: catUrn,
-            type: typeKey,
-            interests,
-            entityIds,
-            qlooRecommendations: qlooRecs
-          });
-        }
-        // Blend all Qloo recs for Gemini
-        const allQlooRecs = allCategoryResults.flatMap(r => r.qlooRecommendations);
         
-        // If no categories were processed successfully, return an error
-        if (allCategoryResults.length === 0) {
-          res.status(404).json({ error: 'No valid interests found for the selected categories.', debugLog: log });
+        // EXTREME FAST MODE: Instant responses for common scenarios
+        const geminiType = categories.length === 1 ? 
+          Object.keys(RECOMMENDATION_TYPE_TO_ENTITY).find(k => RECOMMENDATION_TYPE_TO_ENTITY[k] === categories[0]) || 'multi-category' 
+          : 'multi-category';
+        
+        // Try instant response first, fallback to Gemini if needed
+        const instantResponse = getInstantRecommendation(users, categories, geminiType);
+        if (instantResponse) {
+          res.json({
+            groupId,
+            categories,
+            gemini: instantResponse,
+            debugLog: log,
+            mode: 'instant'
+          });
           return;
         }
         
-        // If only one category selected, use that specific type for better focus
-        const geminiType = categories.length === 1 ? allCategoryResults[0].type : 'multi-category';
-        const gemini = await getGeminiResponse(users, allQlooRecs, geminiType, log);
+        // Fallback to ultra-fast Gemini
+        const gemini = await getGeminiResponseUltraFast(users, categories, geminiType, log);
+        
         res.json({
           groupId,
           categories,
-          allCategoryResults,
           gemini,
           debugLog: log,
+          mode: 'gemini'
         });
         return;
       } catch (err) {
