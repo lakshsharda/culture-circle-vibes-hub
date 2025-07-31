@@ -480,67 +480,84 @@ ${vibeAnalysis || "This recommendation is tailored to your group's unique intere
         </div>
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/5 via-accent/5 to-warm-yellow/10 animate-gradient-move" />
       </aside>
+      
       {/* Main Recommendations UI */}
       <main className="flex-1 ml-72 h-full flex flex-col items-center justify-start py-8 px-4 md:px-10 relative overflow-y-auto">
-        {/* Animated Logo/Mascot */}
+        {/* Header */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary via-warm-yellow to-accent shadow-2xl flex items-center justify-center animate-float mb-2">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary via-warm-yellow to-accent shadow-2xl flex items-center justify-center animate-float mb-4">
             <Sparkles className="h-12 w-12 text-white animate-pulse" />
           </div>
-          <h1 className="text-5xl font-extrabold text-primary drop-shadow-lg tracking-tight mb-2">CultureCircle</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl text-center">Get AI-powered, group-based cultural recommendations and plans—beautifully personalized for your vibe.</p>
+          <h1 className="text-5xl font-extrabold text-primary drop-shadow-lg tracking-tight mb-3">CultureCircle</h1>
+          <p className="text-xl text-muted-foreground max-w-2xl text-center leading-relaxed">
+            Get AI-powered, group-based cultural recommendations and plans—beautifully personalized for your vibe.
+          </p>
         </div>
-        <div className="w-full max-w-4xl grid gap-6">
-          {/* Group & Category Selection */}
+
+        <div className="w-full max-w-4xl space-y-6">
+          {/* Group Selection - Simplified */}
           <Card className="bg-white/80 dark:bg-[#18181b]/80 shadow-xl rounded-2xl border-0 backdrop-blur-md">
-            <CardContent className="p-6 flex flex-col md:flex-row gap-6 items-center">
-              <div className="flex-1 w-full">
-                <label className="block text-sm font-bold text-foreground mb-2">Select Group</label>
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row gap-6 items-start">
+                <div className="flex-1 w-full">
+                  <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Choose Your Group
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Select a group to get personalized recommendations based on everyone's interests
+                  </p>
                   <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                  <SelectTrigger className="rounded-full border-2 border-primary/30 shadow-sm bg-white/70 dark:bg-[#23272f]/70">
-                      <SelectValue placeholder="Choose a group for recommendations" />
+                    <SelectTrigger className="h-12 rounded-lg border-2 border-primary/30 shadow-sm bg-white/70 dark:bg-[#23272f]/70">
+                      <SelectValue placeholder="Select a group for recommendations" />
                     </SelectTrigger>
                     <SelectContent>
                       {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id} className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            {group.name}
+                        <SelectItem key={group.id} value={group.id} className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          {group.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              <div className="flex flex-wrap gap-2 items-center mt-4 md:mt-0">
-                {supportedEntityTypes.map(type => (
-                  <button
-                    key={type.urn}
-                    className={`px-4 py-2 rounded-full font-semibold flex items-center gap-2 shadow-sm border-2 transition-all duration-200 ${selectedCategories.includes(type.urn) ? 'bg-gradient-to-r from-primary via-warm-yellow to-accent text-white border-primary' : 'bg-white/70 dark:bg-[#23272f]/70 border-border text-primary hover:bg-primary/10'}`}
-                    onClick={() => setSelectedCategories(selectedCategories.includes(type.urn) ? selectedCategories.filter(c => c !== type.urn) : [...selectedCategories, type.urn])}
-                    type="button"
-                  >
-                    {type.label === 'Music Artist' && '🎵'}
-                    {type.label === 'Movie' && '🎬'}
-                    {type.label === 'Book' && '📚'}
-                    {type.label === 'Destination' && '🗺️'}
-                    {type.label === 'TV Show' && '📺'}
-                    {type.label === 'Brand' && '👗'}
-                    {type.label === 'Place' && '🍽️'}
-                    {type.label === 'Person' && '🧑'}
-                    {type.label === 'Podcast' && '🎙️'}
-                    {type.label === 'Video Game' && '🎮'}
-                    <span>{type.label}</span>
-                  </button>
-                ))}
+                
+                <div className="w-full lg:w-auto">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Recommendation Categories</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {supportedEntityTypes.map(type => (
+                      <button
+                        key={type.urn}
+                        className={`px-4 py-2 rounded-full font-semibold flex items-center gap-2 shadow-sm border-2 transition-all duration-200 ${selectedCategories.includes(type.urn) ? 'bg-gradient-to-r from-primary via-warm-yellow to-accent text-white border-primary' : 'bg-white/70 dark:bg-[#23272f]/70 border-border text-primary hover:bg-primary/10'}`}
+                        onClick={() => setSelectedCategories(selectedCategories.includes(type.urn) ? selectedCategories.filter(c => c !== type.urn) : [...selectedCategories, type.urn])}
+                        type="button"
+                      >
+                        {type.label === 'Music Artist' && '🎵'}
+                        {type.label === 'Movie' && '🎬'}
+                        {type.label === 'Book' && '📚'}
+                        {type.label === 'Destination' && '🗺️'}
+                        {type.label === 'TV Show' && '📺'}
+                        {type.label === 'Brand' && '👗'}
+                        {type.label === 'Place' && '🍽️'}
+                        {type.label === 'Person' && '🧑'}
+                        {type.label === 'Podcast' && '🎙️'}
+                        {type.label === 'Video Game' && '🎮'}
+                        <span>{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
+
           {/* Chat Area */}
           <Card className="bg-white/90 dark:bg-[#18181b]/90 shadow-2xl border-0 overflow-hidden rounded-2xl backdrop-blur-md">
             <div className="bg-gradient-to-r from-primary/10 via-warm-orange/10 to-warm-yellow/10 p-4 border-b flex items-center gap-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="font-medium text-foreground">CultureCircle AI Assistant</span>
-                <Badge variant="secondary" className="text-xs">Online</Badge>
-              </div>
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="font-medium text-foreground">CultureCircle AI Assistant</span>
+              <Badge variant="secondary" className="text-xs">Online</Badge>
+            </div>
             <CardContent className="p-0">
               <ScrollArea className="h-[500px] p-6 custom-scrollbar">
                 {messages.length === 0 ? (
@@ -549,7 +566,6 @@ ${vibeAnalysis || "This recommendation is tailored to your group's unique intere
                       <div className="w-20 h-20 bg-button-gradient rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg animate-float">
                         <Sparkles className="h-10 w-10 text-white animate-pulse" />
                       </div>
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-white"></div>
                     </div>
                     <h3 className="text-2xl font-bold text-foreground mb-3">Start Your Planning Journey</h3>
                     <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">

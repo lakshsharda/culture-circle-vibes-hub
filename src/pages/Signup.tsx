@@ -157,18 +157,18 @@ const Signup = ({ onSignup }: SignupProps) => {
   const progressPercentage = (currentStep / totalSteps) * 100;
 
   return (
-    <div className="min-h-screen bg-background py-12 px-6">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#f8fafc] via-[#e0e7ff] to-[#f0fdfa] dark:from-[#18181b] dark:via-[#23272f] dark:to-[#1e293b] py-12 px-6">
       <div className="container mx-auto max-w-2xl">
         {/* Progress Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-extrabold text-primary">Join CultureCircle</h1>
-            <span className="text-sm font-medium text-muted-foreground">
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-4xl font-extrabold text-primary">Join CultureCircle</h1>
+            <span className="text-sm font-medium text-muted-foreground bg-white/50 px-4 py-2 rounded-full">
               Step {currentStep} of {totalSteps}
             </span>
           </div>
           
-          <Progress value={progressPercentage} className="h-2 mb-6" />
+          <Progress value={progressPercentage} className="h-3 mb-8" />
           
           <div className="flex justify-between">
             {stepTitles.map((title, index) => {
@@ -178,16 +178,16 @@ const Signup = ({ onSignup }: SignupProps) => {
               
               return (
                 <div key={title} className="flex flex-col items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all ${
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all ${
                     isCompleted
-                      ? "bg-button-gradient text-white"
+                      ? "bg-button-gradient text-white shadow-lg"
                       : isActive
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-white shadow-lg"
                       : "bg-muted text-muted-foreground"
                   }`}>
-                    {isCompleted ? <CheckCircle className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
+                    {isCompleted ? <CheckCircle className="h-6 w-6" /> : <StepIcon className="h-6 w-6" />}
                   </div>
-                  <span className={`text-xs font-medium text-center hidden sm:block ${
+                  <span className={`text-sm font-medium text-center hidden sm:block ${
                     isActive ? "text-primary" : "text-muted-foreground"
                   }`}>
                     {title}
@@ -199,14 +199,14 @@ const Signup = ({ onSignup }: SignupProps) => {
         </div>
 
         {/* Step Content */}
-        <Card className="bg-card shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-center">
+        <Card className="bg-gradient-to-br from-white/90 via-secondary/20 to-accent/10 shadow-2xl rounded-2xl border-0">
+          <CardHeader className="pb-6">
+            <CardTitle className="text-2xl font-bold text-center">
               {stepTitles[currentStep - 1]}
             </CardTitle>
           </CardHeader>
           
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-8">
             {/* Step 1: Basic Info */}
             {currentStep === 1 && (
               <div className="space-y-4">
