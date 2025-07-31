@@ -33,8 +33,8 @@ const MultiSelectInput = ({
 }: MultiSelectInputProps) => {
   return (
     <div>
-      <Label>{label}</Label>
-      <div className="space-y-2">
+      <Label className="text-sm font-medium mb-2 block">{label}</Label>
+      <div className="space-y-3">
         <div className="flex gap-2">
           <Input
             value={currentInput}
@@ -46,11 +46,13 @@ const MultiSelectInput = ({
               }
             }}
             placeholder={placeholder}
+            className="h-12 px-4 border-border/50 focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
           <Button
             type="button"
             variant="warm-outline"
             onClick={() => onAdd(currentInput)}
+            className="px-6 h-12"
           >
             Add
           </Button>
@@ -60,13 +62,14 @@ const MultiSelectInput = ({
             {items.map((item, index) => (
               <span
                 key={index}
-                className="inline-flex items-center gap-1 bg-accent text-accent-foreground px-3 py-1 rounded-full text-sm"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-primary/10 to-accent/10 text-primary px-3 py-2 rounded-full text-sm border border-primary/20"
               >
+                <span className="w-2 h-2 bg-primary rounded-full"></span>
                 {item}
                 <button
                   type="button"
                   onClick={() => onRemove(index)}
-                  className="text-muted-foreground hover:text-destructive ml-1"
+                  className="text-muted-foreground hover:text-destructive ml-1 transition-colors"
                 >
                   ×
                 </button>
@@ -165,131 +168,180 @@ const EditProfile = () => {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-lg text-muted-foreground">Loading profile...</span></div>;
+  if (loading) return (
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#f8fafc] via-[#e0e7ff] to-[#f0fdfa] dark:from-[#18181b] dark:via-[#23272f] dark:to-[#1e293b] flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 bg-button-gradient rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg animate-float">
+          <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <span className="text-lg text-muted-foreground">Loading profile...</span>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-background py-12 px-6">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#f8fafc] via-[#e0e7ff] to-[#f0fdfa] dark:from-[#18181b] dark:via-[#23272f] dark:to-[#1e293b] py-10 px-6 flex flex-col">
       <div className="container mx-auto max-w-2xl">
-        <Card className="bg-card shadow-lg">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-extrabold text-primary mb-2 drop-shadow-lg animate-fade-in-up">Edit Profile</h1>
+          <p className="text-xl text-muted-foreground animate-fade-in-up">
+            Update your cultural preferences and personal information.
+          </p>
+        </div>
+        
+        <Card className="bg-gradient-to-br from-card via-secondary/30 to-accent/20 shadow-2xl rounded-2xl animate-fade-in-up">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center text-primary">Edit Profile</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center text-primary">Profile Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  value={formData.fullName}
-                  onChange={e => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                  placeholder="Enter your full name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  disabled
-                  className="opacity-70 cursor-not-allowed"
-                />
-              </div>
-            </div>
+          <CardContent className="space-y-8">
+            {/* Basic Information Section */}
             <div className="space-y-6">
-              <MultiSelectInput
-                label="Favorite Music Artists"
-                placeholder="Add an artist (e.g., Taylor Swift, The Beatles)"
-                items={formData.musicArtists}
-                onAdd={value => handleAddToArray("musicArtists", value)}
-                onRemove={index => handleRemoveFromArray("musicArtists", index)}
-                currentInput={musicArtistInput}
-                setCurrentInput={setMusicArtistInput}
-              />
-              <MultiSelectInput
-                label="Favorite Movies"
-                placeholder="Add a movie (e.g., Inception, The Godfather)"
-                items={formData.movies}
-                onAdd={value => handleAddToArray("movies", value)}
-                onRemove={index => handleRemoveFromArray("movies", index)}
-                currentInput={movieInput}
-                setCurrentInput={setMovieInput}
-              />
-              <MultiSelectInput
-                label="Favorite Books"
-                placeholder="Add a book (e.g., 1984, Harry Potter)"
-                items={formData.books}
-                onAdd={value => handleAddToArray("books", value)}
-                onRemove={index => handleRemoveFromArray("books", index)}
-                currentInput={bookInput}
-                setCurrentInput={setBookInput}
-              />
-              <MultiSelectInput
-                label="Favorite Travel Destinations"
-                placeholder="Add a destination (e.g., Tokyo, Paris)"
-                items={formData.travelDestinations}
-                onAdd={value => handleAddToArray("travelDestinations", value)}
-                onRemove={index => handleRemoveFromArray("travelDestinations", index)}
-                currentInput={travelInput}
-                setCurrentInput={setTravelInput}
-              />
-              <MultiSelectInput
-                label="Favorite Foods/Cuisines"
-                placeholder="Add a cuisine (e.g., Italian, Sushi)"
-                items={formData.cuisines}
-                onAdd={value => handleAddToArray("cuisines", value)}
-                onRemove={index => handleRemoveFromArray("cuisines", index)}
-                currentInput={cuisineInput}
-                setCurrentInput={setCuisineInput}
-              />
-              <MultiSelectInput
-                label="Favorite TV Shows or Fashion Brands"
-                placeholder="Add a show or brand (e.g., Breaking Bad, Nike)"
-                items={formData.tvShows}
-                onAdd={value => handleAddToArray("tvShows", value)}
-                onRemove={index => handleRemoveFromArray("tvShows", index)}
-                currentInput={tvShowInput}
-                setCurrentInput={setTvShowInput}
-              />
-            </div>
-            <div className="space-y-4">
-              <div>
-                <Label>What do you want recommendations for?</Label>
-                <Select
-                  value={formData.recommendationType}
-                  onValueChange={value => setFormData(prev => ({ ...prev, recommendationType: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose your main interest" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="trip-planning">Trip Planning</SelectItem>
-                    <SelectItem value="playlist">Playlist</SelectItem>
-                    <SelectItem value="food">Food</SelectItem>
-                    <SelectItem value="something-fun">Something Fun</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="vibeDescription">Describe your vibe in 3 words</Label>
-                <Textarea
-                  id="vibeDescription"
-                  value={formData.vibeDescription}
-                  onChange={e => setFormData(prev => ({ ...prev, vibeDescription: e.target.value }))}
-                  placeholder="e.g., adventurous, artistic, spontaneous"
-                  className="resize-none"
-                  rows={3}
-                />
+              <div className="border-b border-border/50 pb-4">
+                <h3 className="text-lg font-semibold text-foreground mb-4">Basic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="fullName" className="text-sm font-medium mb-2 block">Full Name</Label>
+                    <Input
+                      id="fullName"
+                      value={formData.fullName}
+                      onChange={e => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                      placeholder="Enter your full name"
+                      className="h-12 px-4 border-border/50 focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email" className="text-sm font-medium mb-2 block">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      disabled
+                      className="h-12 px-4 opacity-70 cursor-not-allowed bg-muted/50"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
+            
+            {/* Cultural Preferences Section */}
+            <div className="space-y-6">
+              <div className="border-b border-border/50 pb-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">Cultural Preferences</h3>
+                <p className="text-sm text-muted-foreground mb-6">Tell us about your interests to get better recommendations</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <MultiSelectInput
+                    label="Favorite Music Artists"
+                    placeholder="Add an artist (e.g., Taylor Swift, The Beatles)"
+                    items={formData.musicArtists}
+                    onAdd={value => handleAddToArray("musicArtists", value)}
+                    onRemove={index => handleRemoveFromArray("musicArtists", index)}
+                    currentInput={musicArtistInput}
+                    setCurrentInput={setMusicArtistInput}
+                  />
+                  <MultiSelectInput
+                    label="Favorite Movies"
+                    placeholder="Add a movie (e.g., Inception, The Godfather)"
+                    items={formData.movies}
+                    onAdd={value => handleAddToArray("movies", value)}
+                    onRemove={index => handleRemoveFromArray("movies", index)}
+                    currentInput={movieInput}
+                    setCurrentInput={setMovieInput}
+                  />
+                  <MultiSelectInput
+                    label="Favorite Books"
+                    placeholder="Add a book (e.g., 1984, Harry Potter)"
+                    items={formData.books}
+                    onAdd={value => handleAddToArray("books", value)}
+                    onRemove={index => handleRemoveFromArray("books", index)}
+                    currentInput={bookInput}
+                    setCurrentInput={setBookInput}
+                  />
+                  <MultiSelectInput
+                    label="Favorite Travel Destinations"
+                    placeholder="Add a destination (e.g., Tokyo, Paris)"
+                    items={formData.travelDestinations}
+                    onAdd={value => handleAddToArray("travelDestinations", value)}
+                    onRemove={index => handleRemoveFromArray("travelDestinations", index)}
+                    currentInput={travelInput}
+                    setCurrentInput={setTravelInput}
+                  />
+                  <MultiSelectInput
+                    label="Favorite Foods/Cuisines"
+                    placeholder="Add a cuisine (e.g., Italian, Sushi)"
+                    items={formData.cuisines}
+                    onAdd={value => handleAddToArray("cuisines", value)}
+                    onRemove={index => handleRemoveFromArray("cuisines", index)}
+                    currentInput={cuisineInput}
+                    setCurrentInput={setCuisineInput}
+                  />
+                  <MultiSelectInput
+                    label="Favorite TV Shows or Fashion Brands"
+                    placeholder="Add a show or brand (e.g., Breaking Bad, Nike)"
+                    items={formData.tvShows}
+                    onAdd={value => handleAddToArray("tvShows", value)}
+                    onRemove={index => handleRemoveFromArray("tvShows", index)}
+                    currentInput={tvShowInput}
+                    setCurrentInput={setTvShowInput}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Recommendation Preferences Section */}
+            <div className="space-y-6">
+              <div className="border-b border-border/50 pb-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">Recommendation Preferences</h3>
+                <p className="text-sm text-muted-foreground mb-6">Help us understand what you're looking for</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">What do you want recommendations for?</Label>
+                    <Select
+                      value={formData.recommendationType}
+                      onValueChange={value => setFormData(prev => ({ ...prev, recommendationType: value }))}
+                    >
+                      <SelectTrigger className="h-12 px-4 border-border/50 focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        <SelectValue placeholder="Choose your main interest" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="trip-planning">Trip Planning</SelectItem>
+                        <SelectItem value="playlist">Playlist</SelectItem>
+                        <SelectItem value="food">Food</SelectItem>
+                        <SelectItem value="something-fun">Something Fun</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="vibeDescription" className="text-sm font-medium mb-2 block">Describe your vibe in 3 words</Label>
+                    <Textarea
+                      id="vibeDescription"
+                      value={formData.vibeDescription}
+                      onChange={e => setFormData(prev => ({ ...prev, vibeDescription: e.target.value }))}
+                      placeholder="e.g., adventurous, artistic, spontaneous"
+                      className="resize-none h-12 px-4 border-border/50 focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Save Button */}
             <div className="flex justify-end pt-6">
               <Button
                 variant="warm"
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center"
+                className="flex items-center font-bold shadow-lg hover:scale-105 transition-transform px-8 py-3"
               >
-                {saving ? "Saving..." : "Save Changes"}
+                {saving ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving Changes...
+                  </div>
+                ) : (
+                  "Save Changes"
+                )}
               </Button>
             </div>
           </CardContent>
