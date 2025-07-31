@@ -24,20 +24,32 @@ if (!admin.apps.length) {
       console.log("Using fallback FIREBASE_SERVICE_ACCOUNT");
       serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     } else {
-      throw new Error('Firebase service account credentials not found in environment variables');
+      console.error('Firebase service account credentials not found in environment variables');
+      // Don't throw error here, let the handler deal with it
+      console.log("Firebase credentials missing, API will return error when Firebase is accessed");
     }
     
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    console.log("Firebase Admin initialized successfully");
+    if (serviceAccount) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      console.log("Firebase Admin initialized successfully");
+    }
   } catch (error) {
     console.error('Failed to initialize Firebase:', error);
-    throw error;
+    // Don't throw error here, let the handler deal with it
+    console.log("Firebase initialization failed, API will return error when Firebase is accessed");
   }
 }
 
-const db = admin.firestore();
+// Check if Firebase is properly initialized
+let db;
+try {
+  db = admin.firestore();
+} catch (error) {
+  console.error('Firebase Firestore not available:', error);
+  db = null;
+}
 
 // Qloo API config
 const QLOO_API_KEY = process.env.QLOO_API_KEY;
@@ -787,9 +799,31 @@ export default async function handler(req, res) {
       res.status(405).json({ error: 'Only POST requests are allowed.' });
       return;
     }
+    
+    // Validate request body
+    if (!req.body) {
+      res.status(400).json({ error: 'Request body is required.' });
+      return;
+    }
+    
     const { groupId, type, destination, days, categories, filters = {} } = req.body;
-    if (!groupId || (!type && !categories)) {
-      res.status(400).json({ error: 'Missing groupId or type/categories in request body.' });
+    
+    if (!groupId) {
+      res.status(400).json({ error: 'Missing groupId in request body.' });
+      return;
+    }
+    
+    if (!type && (!categories || !Array.isArray(categories) || categories.length === 0)) {
+      res.status(400).json({ error: 'Missing type or categories in request body.' });
+      return;
+    }
+    
+    // Check if Firebase is available
+    if (!db) {
+      res.status(500).json({ 
+        error: 'Database not available. Please check Firebase configuration.',
+        debugLog: log 
+      });
       return;
     }
     if (type === 'itinerary') {
