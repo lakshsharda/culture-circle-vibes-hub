@@ -30,10 +30,10 @@ if (!admin.apps.length) {
     }
     
     if (serviceAccount) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-      console.log("Firebase Admin initialized successfully");
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log("Firebase Admin initialized successfully");
     }
   } catch (error) {
     console.error('Failed to initialize Firebase:', error);
@@ -266,8 +266,8 @@ async function getQlooRecommendations(entityType: string, entityIds: string[], l
 // Helper: Get instant recommendation (no API calls) - REMOVED HARDCODED RESPONSES
 function getInstantRecommendation(users: UserInterests[], categories: string[], type: string): { recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; } | null {
   // Only return null to force AI-generated responses
-  return null;
-}
+    return null;
+  }
 
 // Helper: Call Gemini API (ENHANCED - Context-aware prompts)
 async function getGeminiResponseUltraFast(users: UserInterests[], categories: string[], type: string, log: string[]): Promise<{ recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; }> {
@@ -474,13 +474,13 @@ ${JSON.stringify(userInterests, null, 2)}
   "whyThisWorks": "Clear explanation of why this fits the group",
   "alternative": "Alternative specific suggestion",
   "harmonyScore": 85
-}
+  }
 
 **Example Response:**
 ${promptConfig.example}
 
 Now create a recommendation for this specific group based on their interests.`;
-
+  
   try {
     const resp = await axios.post(
       `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
@@ -681,7 +681,7 @@ ${JSON.stringify(qlooRecs.slice(0, 3), null, 2)}
 ${promptConfig.example}
 
 Now create a recommendation for this specific group that combines their interests with Qloo's data-driven insights.`;
-
+  
   log.push(`Gemini prompt: ${prompt}`);
   
   try {
@@ -889,17 +889,32 @@ export default async function handler(req: any, res: any) {
     // --- Multi-category recommendation (ENHANCED) ---
     if (Array.isArray(categories) && categories.length > 0) {
       try {
+        console.log("Starting multi-category recommendation for groupId:", groupId);
+        log.push(`Starting multi-category recommendation for groupId: ${groupId}`);
+        
         const memberIds = await getGroupMemberIds(groupId);
+        console.log("Found member IDs:", memberIds);
+        log.push(`Found ${memberIds.length} member IDs`);
+        
         const users: UserInterests[] = [];
         for (const userEmail of memberIds) {
           try {
-            users.push(await getUserInterests(userEmail));
+            const userInterests = await getUserInterests(userEmail);
+            users.push(userInterests);
+            console.log(`Successfully fetched interests for user: ${userEmail}`);
+            log.push(`Successfully fetched interests for user: ${userEmail}`);
           } catch (err) {
-            log.push(`User not found or error for userEmail: ${userEmail}`);
+            console.error(`Error fetching user interests for ${userEmail}:`, err);
+            log.push(`User not found or error for userEmail: ${userEmail} - ${err.message}`);
           }
         }
+        
+        console.log("Total users with interests:", users.length);
+        log.push(`Total users with interests: ${users.length}`);
+        
         if (users.length === 0) {
-          res.status(404).json({ error: 'No valid users found in group.' });
+          console.log("No valid users found in group");
+          res.status(404).json({ error: 'No valid users found in group.', debugLog: log });
           return;
         }
         
@@ -908,8 +923,14 @@ export default async function handler(req: any, res: any) {
           Object.keys(RECOMMENDATION_TYPE_TO_ENTITY).find(k => RECOMMENDATION_TYPE_TO_ENTITY[k] === categories[0]) || 'multi-category' 
           : 'multi-category';
         
+        console.log("Calling Gemini with type:", geminiType);
+        log.push(`Calling Gemini with type: ${geminiType}`);
+        
         // Always use AI-generated responses for better quality
         const gemini = await getGeminiResponseUltraFast(users, categories, geminiType, log);
+        
+        console.log("Gemini response received:", gemini);
+        log.push("Gemini response received successfully");
         
         res.json({
           groupId,
@@ -920,6 +941,7 @@ export default async function handler(req: any, res: any) {
         });
         return;
       } catch (err) {
+        console.error("FATAL ERROR in multi-category:", err);
         log.push(`Error in multi-category: ${err.message || err}`);
         res.status(500).json({ error: err.message || 'Internal server error', debugLog: log });
         return;
