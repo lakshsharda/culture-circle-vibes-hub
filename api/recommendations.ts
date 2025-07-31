@@ -482,20 +482,32 @@ ${promptConfig.example}
 Now create a recommendation for this specific group based on their interests.`;
   
   try {
+    console.log("Gemini API URL:", GEMINI_API_URL);
+    console.log("Gemini API Key present:", !!GEMINI_API_KEY);
+    console.log("Prompt length:", prompt.length);
+    console.log("Prompt preview:", prompt.substring(0, 200) + "...");
+    
+    const requestBody = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 800,
+        candidateCount: 1
+      }
+    };
+    
+    console.log("Request body:", JSON.stringify(requestBody, null, 2));
+    
     const resp = await axios.post(
       `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+      requestBody,
       {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 800,
-          candidateCount: 1
+        timeout: 12000,
+        headers: {
+          'Content-Type': 'application/json'
         }
-      },
-      {
-        timeout: 12000
       }
     );
     
