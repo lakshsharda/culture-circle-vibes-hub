@@ -763,8 +763,25 @@ export default async function handler(req, res) {
   console.log("[HANDLER INVOKED] recommendations API");
   console.log("QLOO_API_KEY:", process.env.QLOO_API_KEY ? "Present" : "Missing");
   console.log("GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? "Present" : "Missing");
+  console.log("FIREBASE_SERVICE_ACCOUNT_BASE64:", process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 ? "Present" : "Missing");
+  console.log("FIREBASE_SERVICE_ACCOUNT:", process.env.FIREBASE_SERVICE_ACCOUNT ? "Present" : "Missing");
+  console.log("Request method:", req.method);
   console.log("Request body:", JSON.stringify(req.body));
+  console.log("Request headers:", JSON.stringify(req.headers));
+  
   const log: string[] = [];
+  
+  // Add CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
   try {
     if (req.method !== 'POST') {
       res.status(405).json({ error: 'Only POST requests are allowed.' });
@@ -930,8 +947,13 @@ export default async function handler(req, res) {
       return;
     }
   } catch (err) {
+    console.error("FATAL ERROR in recommendations API:", err);
     log.push(`Error: ${err.message || err}`);
-    res.status(500).json({ error: err.message || 'Internal server error', debugLog: log });
+    res.status(500).json({ 
+      error: err.message || 'Internal server error', 
+      debugLog: log,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
     return;
   }
 }
