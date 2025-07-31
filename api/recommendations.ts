@@ -771,7 +771,7 @@ Now create a recommendation for this specific group that combines their interest
 //secret comment
 
 // Main handler for Vercel
-const handler = async (req: any, res: any) => {
+export default async function handler(req: any, res: any) {
   console.log("[HANDLER INVOKED] recommendations API");
   console.log("QLOO_API_KEY:", process.env.QLOO_API_KEY ? "Present" : "Missing");
   console.log("GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? "Present" : "Missing");
@@ -990,9 +990,7 @@ const handler = async (req: any, res: any) => {
     });
     return;
   }
-};
-
-export default handler;
+}
 
 // ---
 // Sample JSON response:

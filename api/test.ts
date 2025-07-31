@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const handler = async (req: VercelRequest, res: VercelResponse) => {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -39,6 +39,4 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-};
-
-export default handler;
+}
