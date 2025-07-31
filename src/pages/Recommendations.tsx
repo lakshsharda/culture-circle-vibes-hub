@@ -52,6 +52,14 @@ const Recommendations = () => {
   const [chatSessions, setChatSessions] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [loadingChat, setLoadingChat] = useState(false);
+  const [popularityMin, setPopularityMin] = useState<number | undefined>();
+  const [popularityMax, setPopularityMax] = useState<number | undefined>();
+  const [yearMin, setYearMin] = useState<number | undefined>();
+  const [yearMax, setYearMax] = useState<number | undefined>();
+  const [countryCode, setCountryCode] = useState<string>("");
+  const [selectedTags, setSelectedTags] = useState<{ id: string; name: string }[]>([]);
+  const [tagSearch, setTagSearch] = useState<string>("");
+  const [tagSuggestions, setTagSuggestions] = useState<{ id: string; name: string }[]>([]);
 
   // Mock groups data
   // const groups = [
@@ -301,13 +309,13 @@ const Recommendations = () => {
         setIsGenerating(false);
         return;
       }
-      // Multi-category recommendation
+      // Multi-category recommendation (no filters)
       const res = await fetch('/api/recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           groupId: selectedGroup,
-          categories: selectedCategories,
+          categories: selectedCategories
         })
       });
 
@@ -506,19 +514,25 @@ ${vibeAnalysis}`;
                 
                 <div className="w-full lg:w-auto">
                   <h4 className="text-sm font-semibold text-foreground mb-3">Recommendation Categories</h4>
-                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                    {supportedEntityTypes.slice(0, 6).map(type => (
+                  <div className="flex flex-wrap gap-2">
+                    {supportedEntityTypes.map(type => (
                       <button
                         key={type.urn}
-                        className={`px-3 py-2 rounded-lg font-medium text-sm shadow-sm border-2 transition-all duration-200 ${
-                          selectedCategories.includes(type.urn) 
-                            ? 'bg-gradient-to-r from-primary via-warm-yellow to-accent text-white border-primary' 
-                            : 'bg-white/70 dark:bg-[#23272f]/70 border-border text-primary hover:bg-primary/10'
-                        }`}
+                        className={`px-4 py-2 rounded-full font-semibold flex items-center gap-2 shadow-sm border-2 transition-all duration-200 ${selectedCategories.includes(type.urn) ? 'bg-gradient-to-r from-primary via-warm-yellow to-accent text-white border-primary' : 'bg-white/70 dark:bg-[#23272f]/70 border-border text-primary hover:bg-primary/10'}`}
                         onClick={() => setSelectedCategories(selectedCategories.includes(type.urn) ? selectedCategories.filter(c => c !== type.urn) : [...selectedCategories, type.urn])}
                         type="button"
                       >
-                        {type.label}
+                        {type.label === 'Music Artist' && '🎵'}
+                        {type.label === 'Movie' && '🎬'}
+                        {type.label === 'Book' && '📚'}
+                        {type.label === 'Destination' && '🗺️'}
+                        {type.label === 'TV Show' && '📺'}
+                        {type.label === 'Brand' && '👗'}
+                        {type.label === 'Place' && '🍽️'}
+                        {type.label === 'Person' && '🧑'}
+                        {type.label === 'Podcast' && '🎙️'}
+                        {type.label === 'Video Game' && '🎮'}
+                        <span>{type.label}</span>
                       </button>
                     ))}
                   </div>
@@ -532,6 +546,7 @@ ${vibeAnalysis}`;
             <div className="bg-gradient-to-r from-primary/10 via-warm-orange/10 to-warm-yellow/10 p-4 border-b flex items-center gap-3">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               <span className="font-medium text-foreground">CultureCircle AI Assistant</span>
+              <Badge variant="secondary" className="text-xs">Online</Badge>
             </div>
             <CardContent className="p-0">
               <ScrollArea className="h-[500px] p-6 custom-scrollbar">
