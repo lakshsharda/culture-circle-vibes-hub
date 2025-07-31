@@ -57,7 +57,14 @@ const QLOO_BASE_URL = 'https://hackathon.api.qloo.com/v2';
 
 // Gemini API config
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL = process.env.GEMINI_DEFAULT_MODEL || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+
+// Debug environment variables
+console.log("Environment check:");
+console.log("- GEMINI_API_KEY present:", !!GEMINI_API_KEY);
+console.log("- GEMINI_API_KEY length:", GEMINI_API_KEY?.length || 0);
+console.log("- GEMINI_API_KEY preview:", GEMINI_API_KEY?.substring(0, 10) + "...");
+console.log("- GEMINI_API_URL:", GEMINI_API_URL);
 
 // Recommendation type to Qloo entity mapping
 const RECOMMENDATION_TYPE_TO_ENTITY: Record<string, string> = {
