@@ -267,7 +267,29 @@ const Recommendations = () => {
     return (data.results || []).map((tag: any) => tag.id);
   }
 
-  // Refactored handleSendMessage
+  // Test API connectivity
+  const testAPI = async () => {
+    try {
+      console.log("Testing API connectivity...");
+      const testRes = await fetch('/api/test', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (testRes.ok) {
+        const testData = await testRes.json();
+        console.log("API test successful:", testData);
+        return true;
+      } else {
+        console.error("API test failed:", testRes.status, testRes.statusText);
+        return false;
+      }
+    } catch (error) {
+      console.error("API test error:", error);
+      return false;
+    }
+  };
+
   const handleSendMessage = async (userPrompt: string) => {
     setIsGenerating(true);
     const userMessage: ChatMessage = {
@@ -279,6 +301,17 @@ const Recommendations = () => {
     setMessages(prev => [...prev, userMessage]);
 
     try {
+      // Test API connectivity first
+      const apiTestResult = await testAPI();
+      if (!apiTestResult) {
+        toast({ 
+          title: "API Error", 
+          description: "Cannot connect to recommendation service. Please try again later.", 
+          variant: "destructive" 
+        });
+        setIsGenerating(false);
+        return;
+      }
       if (recommendationMode === 'itinerary') {
         setItineraryResult(null);
         const res = await fetch('/api/recommendations', {
@@ -320,22 +353,59 @@ const Recommendations = () => {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: "Failed to parse error response" }));
-        console.error("API Error:", errorData);
-        toast({ title: "API Error", description: errorData.error || "An unknown error occurred.", variant: "destructive" });
+        console.error("API Response not OK:", res.status, res.statusText);
+        
+        // Try to get the response text first
+        const responseText = await res.text();
+        console.error("Raw response:", responseText);
+        
+        let errorData;
+        try {
+          // Try to parse as JSON
+          errorData = JSON.parse(responseText);
+        } catch (parseError) {
+          // If it's not JSON, create a generic error
+          errorData = { 
+            error: `Server error (${res.status}): ${res.statusText}`,
+            details: responseText.substring(0, 200) // First 200 chars for debugging
+          };
+        }
+        
+        console.error("Parsed error data:", errorData);
+        toast({ 
+          title: "API Error", 
+          description: errorData.error || `Server error: ${res.status} ${res.statusText}`, 
+          variant: "destructive" 
+        });
         setIsGenerating(false);
         return;
       }
 
-      const data = await res.json();
-      console.log("API Response:", data);
+      let data;
+      try {
+        data = await res.json();
+        console.log("API Response:", data);
+      } catch (parseError) {
+        console.error("Failed to parse successful response as JSON:", parseError);
+        toast({ 
+          title: "API Error", 
+          description: "Invalid response format from server.", 
+          variant: "destructive" 
+        });
+        setIsGenerating(false);
+        return;
+      }
       
       // Enhanced error handling for missing fields
       const { recommendation, alternative, harmonyScore, vibeAnalysis } = data.gemini || {};
       
       if (!recommendation) {
         console.error("Missing recommendation in API response:", data);
-        toast({ title: "API Error", description: "Invalid response format from recommendation service.", variant: "destructive" });
+        toast({ 
+          title: "API Error", 
+          description: "Invalid response format from recommendation service.", 
+          variant: "destructive" 
+        });
         setIsGenerating(false);
         return;
       }

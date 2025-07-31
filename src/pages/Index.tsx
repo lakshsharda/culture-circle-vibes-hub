@@ -34,5 +34,5 @@ const Index = () => {
     </div>
   );
 };
-
+//sec comment
 export default Index;
