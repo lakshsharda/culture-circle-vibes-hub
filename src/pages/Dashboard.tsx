@@ -364,7 +364,7 @@ const Dashboard = () => {
     "Art",
     "Books",
     "Movies",
-    "Sports",
+    "Sports", 
     "Gaming",
     "Other"
   ];

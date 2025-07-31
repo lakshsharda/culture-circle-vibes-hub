@@ -251,103 +251,249 @@ async function getQlooRecommendations(entityType: string, entityIds: string[], l
   }
 }
 
-// Helper: Get instant recommendation (no API calls)
+// Helper: Get instant recommendation (no API calls) - REMOVED HARDCODED RESPONSES
 function getInstantRecommendation(users: UserInterests[], categories: string[], type: string): { recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; } | null {
-  // Extract top interests from users
-  const allInterests = users.flatMap(u => [
-    ...(u.musicArtists?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name) || []),
-    ...(u.movies?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name) || []),
-    ...(u.cuisines?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name) || []),
-    ...(u.travelDestinations?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name) || [])
-  ]).filter(Boolean);
+  // Only return null to force AI-generated responses
+  return null;
+}
 
-  if (allInterests.length === 0) return null;
+// Helper: Call Gemini API (ENHANCED - Context-aware prompts)
+async function getGeminiResponseUltraFast(users: UserInterests[], categories: string[], type: string, log: string[]): Promise<{ recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; }> {
+  // Extract meaningful interests from users
+  const userInterests = users.map(u => ({
+    music: u.musicArtists?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean),
+    movies: u.movies?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean),
+    cuisines: u.cuisines?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean),
+    travel: u.travelDestinations?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean),
+    books: u.books?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean),
+    tvShows: u.tvShows?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean)
+  })).filter(u => Object.values(u).some(arr => arr && arr.length > 0));
 
-  // Pre-cached responses for common scenarios
-  const responses = {
-    'music': {
-      recommendation: `🎵 Create a collaborative playlist featuring ${allInterests.slice(0, 3).join(', ')} and similar artists. Perfect for your group's diverse music tastes!`,
-      whyThisWorks: `This playlist combines everyone's favorite genres and artists, creating a mix that appeals to all group members.`,
-      alternative: `🎧 Try a music discovery session where each person shares one song and explains why they love it.`,
-      harmonyScore: 85
+  // Create entity-specific prompts
+  const entityPrompts = {
+    'urn:entity:artist': {
+      focus: 'music artists and songs',
+      instruction: `Create a specific music recommendation for this group. Consider:
+1. A curated playlist with specific song titles and artists
+2. A music discovery session plan
+3. Concert or live music recommendations
+4. Genre exploration suggestions
+
+Be specific with artist names, song titles, and actionable steps.`,
+      example: `"🎵 **Curated Playlist: Indie Vibes Mix**
+• Tame Impala - 'The Less I Know The Better'
+• Clairo - 'Pretty Girl' 
+• Boy Pablo - 'Everytime'
+• Mac DeMarco - 'Chamber of Reflection'
+
+**Why this works:** Combines dreamy vocals with psychedelic rock elements that appeal to your group's diverse tastes."`
     },
-    'movie': {
-      recommendation: `🎬 Host a movie night featuring films similar to ${allInterests.slice(0, 3).join(', ')}. Set up a cozy viewing area with themed snacks!`,
-      whyThisWorks: `These movie choices reflect the group's shared taste in genres and storytelling styles.`,
-      alternative: `📺 Create a movie marathon with films that blend everyone's favorite genres and themes.`,
-      harmonyScore: 80
+    'urn:entity:movie': {
+      focus: 'movies and films',
+      instruction: `Create a specific movie recommendation for this group. Consider:
+1. A movie night lineup with specific film titles
+2. A themed movie marathon
+3. New releases that match their tastes
+4. Hidden gems or cult classics
+
+Be specific with movie titles, genres, and viewing suggestions.`,
+      example: `"🎬 **Movie Night: Psychological Thrillers**
+• 'Inception' (2010) - Mind-bending sci-fi
+• 'The Prestige' (2006) - Mystery thriller
+• 'Shutter Island' (2010) - Psychological drama
+
+**Why this works:** These films combine your group's love for complex storytelling and visual effects."`
     },
-    'restaurant': {
-      recommendation: `🍽️ Plan a food adventure trying restaurants that serve ${allInterests.slice(0, 3).join(', ')} cuisines. Make it a progressive dinner!`,
-      whyThisWorks: `This culinary journey satisfies everyone's taste preferences while creating a fun group experience.`,
-      alternative: `👨‍🍳 Organize a potluck where everyone brings a dish from their favorite cuisine.`,
-      harmonyScore: 90
+    'urn:entity:place': {
+      focus: 'restaurants and dining experiences',
+      instruction: `Create a specific dining recommendation for this group. Consider:
+1. Specific restaurant recommendations with cuisine types
+2. A progressive dinner plan
+3. Food tour suggestions
+4. Cooking class or food experience ideas
+
+Be specific with restaurant names, dishes, and dining experiences.`,
+      example: `"🍽️ **Progressive Dinner Adventure**
+• Appetizers: Dim sum at Golden Dragon (authentic Chinese)
+• Main course: Spicy Thai at Bangkok Palace
+• Dessert: Gelato at Bella Italia
+
+**Why this works:** This culinary journey satisfies everyone's taste for authentic international flavors."`
     },
-    'travel': {
-      recommendation: `✈️ Plan a trip to destinations that offer experiences related to ${allInterests.slice(0, 3).join(', ')}. Research activities everyone will enjoy!`,
-      whyThisWorks: `These destinations align with the group's travel interests and preferences for experiences.`,
-      alternative: `🗺️ Create a virtual travel experience exploring these destinations through food, music, and culture.`,
-      harmonyScore: 85
+    'urn:entity:destination': {
+      focus: 'travel destinations and experiences',
+      instruction: `Create a specific travel recommendation for this group. Consider:
+1. Specific destination recommendations
+2. A detailed travel itinerary
+3. Cultural experience suggestions
+4. Adventure or relaxation activities
+
+Be specific with destinations, activities, and travel tips.`,
+      example: `"✈️ **Weekend Getaway: Cultural Immersion**
+• Destination: Kyoto, Japan
+• Activities: Temple visits, tea ceremony, traditional ryokan stay
+• Food: Kaiseki dinner, street food tour
+
+**Why this works:** Combines your group's love for culture, history, and authentic experiences."`
+    },
+    'urn:entity:book': {
+      focus: 'books and reading',
+      instruction: `Create a specific book recommendation for this group. Consider:
+1. A book club reading list with specific titles
+2. Genre exploration suggestions
+3. Author recommendations
+4. Reading challenge ideas
+
+Be specific with book titles, authors, and reading suggestions.`,
+      example: `"📚 **Book Club: Contemporary Fiction**
+• 'The Midnight Library' by Matt Haig
+• 'Klara and the Sun' by Kazuo Ishiguro
+• 'The Seven Husbands of Evelyn Hugo' by Taylor Jenkins Reid
+
+**Why this works:** These books offer thought-provoking themes that will spark great group discussions."`
+    },
+    'urn:entity:tv_show': {
+      focus: 'TV shows and series',
+      instruction: `Create a specific TV show recommendation for this group. Consider:
+1. A binge-worthy series lineup
+2. A themed TV night plan
+3. New show recommendations
+4. Classic series suggestions
+
+Be specific with show titles, genres, and viewing suggestions.`,
+      example: `"📺 **Binge-Worthy Series: Mystery & Drama**
+• 'Dark' (Netflix) - German sci-fi thriller
+• 'The Good Place' (Netflix) - Philosophical comedy
+• 'Mindhunter' (Netflix) - Crime drama
+
+**Why this works:** These shows combine complex storytelling with your group's appreciation for thought-provoking content."`
+    },
+    'urn:entity:video_game': {
+      focus: 'video games and gaming',
+      instruction: `Create a specific video game recommendation for this group. Consider:
+1. Multiplayer games that work well for groups
+2. Single-player games with shared experiences
+3. Gaming events or tournaments
+4. Game genres that match their interests
+
+Be specific with game titles, platforms, and gaming suggestions.`,
+      example: `"🎮 **Group Gaming Night: Cooperative Adventures**
+• 'Overcooked 2' - Chaotic cooking cooperation
+• 'Among Us' - Social deduction fun
+• 'Minecraft' - Creative building together
+
+**Why this works:** These games encourage teamwork and social interaction while being accessible to different skill levels."`
+    },
+    'urn:entity:podcast': {
+      focus: 'podcasts and audio content',
+      instruction: `Create a specific podcast recommendation for this group. Consider:
+1. Podcast series that match their interests
+2. Listening party suggestions
+3. Discussion topics based on episodes
+4. Audio content for different activities
+
+Be specific with podcast titles, episodes, and listening suggestions.`,
+      example: `"🎧 **Podcast Club: Thought-Provoking Discussions**
+• 'This American Life' - Storytelling excellence
+• 'Radiolab' - Science and curiosity
+• 'The Moth' - Personal storytelling
+
+**Why this works:** These podcasts offer engaging content that will spark meaningful group discussions."`
+    },
+    'urn:entity:brand': {
+      focus: 'brands and products',
+      instruction: `Create a specific brand recommendation for this group. Consider:
+1. Product recommendations that match their lifestyle
+2. Brand experiences or events
+3. Shopping or discovery suggestions
+4. Lifestyle brand alignments
+
+Be specific with brand names, products, and experience suggestions.`,
+      example: `"🛍️ **Lifestyle Brand Discovery**
+• Patagonia - Sustainable outdoor gear
+• Glossier - Minimalist beauty essentials
+• Allbirds - Comfortable sustainable footwear
+
+**Why this works:** These brands align with your group's values of sustainability and quality."`
     },
     'multi-category': {
-      recommendation: `🎉 Organize a themed event that combines ${allInterests.slice(0, 3).join(', ')}. Create stations for different activities!`,
-      whyThisWorks: `This multi-faceted approach ensures everyone finds something they love while trying new things.`,
-      alternative: `🎪 Host a cultural exchange night where each person shares something from their interests.`,
-      harmonyScore: 88
+      focus: 'multi-category experiences',
+      instruction: `Create a comprehensive recommendation that combines multiple categories. Consider:
+1. A themed event that incorporates different interests
+2. A progressive experience across multiple categories
+3. A cultural immersion that touches on various aspects
+4. A discovery journey through different media types
+
+Be specific with activities, venues, and experience details.`,
+      example: `"🎉 **Cultural Immersion Night**
+• Music: Live jazz performance
+• Food: International tapas tasting
+• Art: Gallery walk with local artists
+• Conversation: Cultural exchange activities
+
+**Why this works:** This multi-sensory experience appeals to everyone's interests while creating shared memories."`
     }
   };
 
-  return responses[type] || null;
+  // Determine the primary category for focused recommendations
+  const primaryCategory = categories.length === 1 ? categories[0] : categories[0];
+  const promptConfig = entityPrompts[primaryCategory] || entityPrompts['urn:entity:artist'];
+
+  // Create a detailed, context-rich prompt
+  const prompt = `You are CultureCircle AI, an expert in creating personalized recommendations for groups.
+
+**Group Interests Analysis:**
+${JSON.stringify(userInterests, null, 2)}
+
+**Requested Categories:** ${categories.join(', ')}
+
+**Your Task:** ${promptConfig.instruction}
+
+**Requirements:**
+1. Be SPECIFIC with names, titles, and actionable steps
+2. Consider the group's diverse interests and find common ground
+3. Provide a clear "why this works" explanation
+4. Suggest an alternative option
+5. Calculate a harmony score (0-100) based on interest overlap
+
+**Response Format (JSON only):**
+{
+  "recommendation": "Specific, detailed recommendation with names/titles",
+  "whyThisWorks": "Clear explanation of why this fits the group",
+  "alternative": "Alternative specific suggestion",
+  "harmonyScore": 85
 }
 
-// Helper: Call Gemini API (ULTRA FAST mode - minimal processing)
-async function getGeminiResponseUltraFast(users: UserInterests[], categories: string[], type: string, log: string[]): Promise<{ recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; }> {
-  // Map type to specific category focus
-  const categoryFocus = {
-    'music': 'music artists and songs',
-    'movie': 'movies and films', 
-    'restaurant': 'restaurants and dining experiences',
-    'travel': 'travel destinations and experiences',
-    'multi-category': 'the selected categories'
-  };
-  
-  const focus = categoryFocus[type] || type;
-  
-  // ULTRA FAST: Minimal prompt with only essential data
-  const userInterests = users.map(u => ({
-    music: u.musicArtists?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name),
-    movies: u.movies?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name),
-    cuisines: u.cuisines?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name),
-    travel: u.travelDestinations?.slice(0, 1)?.map(i => typeof i === 'string' ? i : i.name)
-  })).filter(u => u.music?.length || u.movies?.length || u.cuisines?.length || u.travel?.length);
+**Example Response:**
+${promptConfig.example}
 
-  const prompt = `Create a ${focus} recommendation for this group. Interests: ${JSON.stringify(userInterests)}. Categories: ${categories.join(', ')}. Respond with JSON: {"recommendation": "specific recommendation", "whyThisWorks": "brief explanation", "alternative": "alternative suggestion", "harmonyScore": 85}`;
-  
+Now create a recommendation for this specific group based on their interests.`;
+
   try {
     const resp = await axios.post(
       `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
       {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.5, // Lower temperature for faster, more predictable responses
-          topP: 0.7,
-          topK: 20,
-          maxOutputTokens: 300, // Even shorter responses
-          candidateCount: 1 // Only generate one response
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 800,
+          candidateCount: 1
         }
       },
       {
-        timeout: 8000 // Reduced timeout to 8 seconds
+        timeout: 12000
       }
     );
     
     const text = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     log.push(`Raw Gemini response: ${text}`);
     
-    // Try multiple JSON extraction methods
+    // Enhanced JSON parsing with multiple fallback methods
     let parsed: any = null;
     
-    // Method 1: Look for JSON object with regex
+    // Method 1: Look for JSON object with regex (most common)
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
@@ -357,7 +503,7 @@ async function getGeminiResponseUltraFast(users: UserInterests[], categories: st
       }
     }
     
-    // Method 2: If no JSON found, try parsing the entire response
+    // Method 2: Try parsing the entire response
     if (!parsed) {
       try {
         parsed = JSON.parse(text.trim());
@@ -366,22 +512,31 @@ async function getGeminiResponseUltraFast(users: UserInterests[], categories: st
       }
     }
     
-    // Method 3: If still no JSON, create a fallback response
+    // Method 3: If still no JSON, create a structured response from the text
     if (!parsed) {
-      log.push(`Could not extract JSON from response, using fallback`);
-      return {
-        recommendation: text || "Could not generate recommendation due to parsing error.",
-        alternative: "Please try again with a different request.",
-        harmonyScore: 50,
-        vibeAnalysis: "Unable to parse AI response properly."
+      log.push(`Could not extract JSON, creating structured response from text`);
+      
+      // Try to extract meaningful parts from the text
+      const lines = text.split('\n').filter(line => line.trim());
+      const recommendation = lines.find(line => line.includes('🎵') || line.includes('🎬') || line.includes('🍽️') || line.includes('✈️') || line.includes('📚') || line.includes('📺')) || lines[0] || "Specific recommendation based on your group's interests.";
+      
+      const whyThisWorks = lines.find(line => line.toLowerCase().includes('why') || line.toLowerCase().includes('works') || line.toLowerCase().includes('because')) || "This recommendation combines your group's diverse interests to create a shared experience everyone will enjoy.";
+      
+      const alternative = lines.find(line => line.toLowerCase().includes('alternative') || line.toLowerCase().includes('also') || line.toLowerCase().includes('try')) || "Consider exploring similar genres or themes together as a group.";
+      
+      parsed = {
+        recommendation,
+        whyThisWorks,
+        alternative,
+        harmonyScore: 75
       };
     }
     
-    // Extract values with fallbacks
-    const recommendation = parsed.recommendation || "No recommendation generated.";
-    const alternative = parsed.alternative || "No alternative suggestion provided.";
-    const harmonyScore = typeof parsed.harmonyScore === 'number' ? parsed.harmonyScore : 50;
-    const vibeAnalysis = parsed.whyThisWorks || parsed.vibeAnalysis || "Analysis not available.";
+    // Extract values with proper fallbacks
+    const recommendation = parsed.recommendation || "Based on your group's interests, I recommend exploring shared cultural experiences together.";
+    const alternative = parsed.alternative || "Consider trying something completely new that none of you have experienced before.";
+    const harmonyScore = typeof parsed.harmonyScore === 'number' ? Math.max(0, Math.min(100, parsed.harmonyScore)) : 75;
+    const vibeAnalysis = parsed.whyThisWorks || parsed.vibeAnalysis || "This recommendation is tailored to your group's unique combination of interests and preferences.";
     
     log.push(`Successfully parsed: recommendation='${recommendation.substring(0, 50)}...', harmonyScore=${harmonyScore}`);
     
@@ -390,48 +545,131 @@ async function getGeminiResponseUltraFast(users: UserInterests[], categories: st
   } catch (error) {
     log.push(`Gemini API error: ${error.message}`);
     return {
-      recommendation: "Sorry, I couldn't generate a recommendation right now. Please try again.",
-      alternative: "Please try a different request.",
-      harmonyScore: 0,
-      vibeAnalysis: "Error communicating with AI service."
+      recommendation: "I'm having trouble generating a recommendation right now. Please try again with a different request.",
+      alternative: "Consider manually exploring your group's shared interests together.",
+      harmonyScore: 50,
+      vibeAnalysis: "Unable to process your request at this time. Please try again."
     };
   }
 }
 
-// Helper: Call Gemini API (Original version with Qloo data)
+// Helper: Call Gemini API (ENHANCED - With Qloo data integration)
 async function getGeminiResponse(users: UserInterests[], qlooRecs: any[], type: string, log: string[]): Promise<{ recommendation: string; alternative: string; harmonyScore: number; vibeAnalysis: string; }> {
-  // Map type to specific category focus
-  const categoryFocus = {
-    'music': 'music artists and songs',
-    'movie': 'movies and films', 
-    'restaurant': 'restaurants and dining experiences',
-    'travel': 'travel destinations and experiences',
-    'multi-category': 'the selected categories'
+  // Extract meaningful interests from users
+  const userInterests = users.map(u => ({
+    music: u.musicArtists?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean),
+    movies: u.movies?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean),
+    cuisines: u.cuisines?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean),
+    travel: u.travelDestinations?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean),
+    books: u.books?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean),
+    tvShows: u.tvShows?.slice(0, 3)?.map(i => typeof i === 'string' ? i : i.name).filter(Boolean)
+  })).filter(u => Object.values(u).some(arr => arr && arr.length > 0));
+
+  // Create entity-specific prompts with Qloo integration
+  const entityPrompts = {
+    'music': {
+      focus: 'music artists and songs',
+      instruction: `Create a specific music recommendation using both the group's interests and Qloo's data-driven suggestions. Consider:
+1. A curated playlist combining their favorite artists with Qloo recommendations
+2. A music discovery session featuring Qloo-suggested artists
+3. Concert recommendations based on Qloo insights
+4. Genre exploration using Qloo's popularity data
+
+Be specific with artist names, song titles, and actionable steps.`,
+      example: `"🎵 **Curated Playlist: Indie Vibes Mix**
+• Tame Impala - 'The Less I Know The Better'
+• Clairo - 'Pretty Girl' 
+• Boy Pablo - 'Everytime'
+• Mac DeMarco - 'Chamber of Reflection'
+
+**Why this works:** Combines dreamy vocals with psychedelic rock elements that appeal to your group's diverse tastes."`
+    },
+    'movie': {
+      focus: 'movies and films',
+      instruction: `Create a specific movie recommendation using both the group's interests and Qloo's data-driven suggestions. Consider:
+1. A movie night lineup combining their favorites with Qloo recommendations
+2. A themed movie marathon using Qloo's genre insights
+3. New releases that match their tastes based on Qloo data
+4. Hidden gems suggested by Qloo's popularity algorithms
+
+Be specific with movie titles, genres, and viewing suggestions.`,
+      example: `"🎬 **Movie Night: Psychological Thrillers**
+• 'Inception' (2010) - Mind-bending sci-fi
+• 'The Prestige' (2006) - Mystery thriller
+• 'Shutter Island' (2010) - Psychological drama
+
+**Why this works:** These films combine your group's love for complex storytelling and visual effects."`
+    },
+    'restaurant': {
+      focus: 'restaurants and dining experiences',
+      instruction: `Create a specific dining recommendation using both the group's interests and Qloo's data-driven suggestions. Consider:
+1. Restaurant recommendations combining their preferences with Qloo insights
+2. A progressive dinner plan using Qloo's popularity data
+3. Food tour suggestions based on Qloo recommendations
+4. Cooking class or food experience ideas
+
+Be specific with restaurant names, dishes, and dining experiences.`,
+      example: `"🍽️ **Progressive Dinner Adventure**
+• Appetizers: Dim sum at Golden Dragon (authentic Chinese)
+• Main course: Spicy Thai at Bangkok Palace
+• Dessert: Gelato at Bella Italia
+
+**Why this works:** This culinary journey satisfies everyone's taste for authentic international flavors."`
+    },
+    'travel': {
+      focus: 'travel destinations and experiences',
+      instruction: `Create a specific travel recommendation using both the group's interests and Qloo's data-driven suggestions. Consider:
+1. Destination recommendations combining their preferences with Qloo insights
+2. A detailed travel itinerary using Qloo's popularity data
+3. Cultural experience suggestions based on Qloo recommendations
+4. Adventure or relaxation activities
+
+Be specific with destinations, activities, and travel tips.`,
+      example: `"✈️ **Weekend Getaway: Cultural Immersion**
+• Destination: Kyoto, Japan
+• Activities: Temple visits, tea ceremony, traditional ryokan stay
+• Food: Kaiseki dinner, street food tour
+
+**Why this works:** Combines your group's love for culture, history, and authentic experiences."`
+    }
   };
-  
-  const focus = categoryFocus[type] || type;
-  
-  const prompt = `You are CultureCircle AI, an expert in crafting ${focus} recommendations for groups.
 
-Group Interests: ${JSON.stringify(users.map(u => ({ 
-    music: u.musicArtists?.slice(0, 2), 
-    movies: u.movies?.slice(0, 2), 
-    cuisines: u.cuisines?.slice(0, 2),
-    travel: u.travelDestinations?.slice(0, 2)
-  })), null, 2)}
+  const promptConfig = entityPrompts[type] || entityPrompts['music'];
 
-Qloo Recommendations: ${JSON.stringify(qlooRecs.slice(0, 3), null, 2)}
+  // Create a detailed, context-rich prompt with Qloo integration
+  const prompt = `You are CultureCircle AI, an expert in creating personalized recommendations for groups using both user interests and data-driven insights.
 
-Create a ${focus} recommendation that combines these interests. Focus ONLY on ${focus}.
+**Group Interests Analysis:**
+${JSON.stringify(userInterests, null, 2)}
 
-Respond with JSON:
+**Qloo Data-Driven Recommendations:**
+${JSON.stringify(qlooRecs.slice(0, 3), null, 2)}
+
+**Requested Category:** ${type}
+
+**Your Task:** ${promptConfig.instruction}
+
+**Requirements:**
+1. Be SPECIFIC with names, titles, and actionable steps
+2. Combine the group's interests with Qloo's data-driven suggestions
+3. Consider Qloo's popularity and similarity data when making recommendations
+4. Provide a clear "why this works" explanation
+5. Suggest an alternative option
+6. Calculate a harmony score (0-100) based on interest overlap and Qloo data
+
+**Response Format (JSON only):**
 {
-  "recommendation": "Specific ${focus} recommendation",
-  "whyThisWorks": "Brief explanation",
-  "alternative": "Alternative ${focus} suggestion", 
+  "recommendation": "Specific, detailed recommendation with names/titles",
+  "whyThisWorks": "Clear explanation of why this fits the group",
+  "alternative": "Alternative specific suggestion",
   "harmonyScore": 85
-}`;
-  
+}
+
+**Example Response:**
+${promptConfig.example}
+
+Now create a recommendation for this specific group that combines their interests with Qloo's data-driven insights.`;
+
   log.push(`Gemini prompt: ${prompt}`);
   
   try {
@@ -443,21 +681,22 @@ Respond with JSON:
           temperature: 0.7,
           topP: 0.8,
           topK: 40,
-          maxOutputTokens: 500 // Limit response length for faster generation
+          maxOutputTokens: 800,
+          candidateCount: 1
         }
       },
       {
-        timeout: 15000 // 15 second timeout for Gemini
+        timeout: 15000
       }
     );
     
     const text = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     log.push(`Raw Gemini response: ${text}`);
     
-    // Try multiple JSON extraction methods
+    // Enhanced JSON parsing with multiple fallback methods
     let parsed: any = null;
     
-    // Method 1: Look for JSON object with regex
+    // Method 1: Look for JSON object with regex (most common)
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
@@ -467,7 +706,7 @@ Respond with JSON:
       }
     }
     
-    // Method 2: If no JSON found, try parsing the entire response
+    // Method 2: Try parsing the entire response
     if (!parsed) {
       try {
         parsed = JSON.parse(text.trim());
@@ -476,22 +715,31 @@ Respond with JSON:
       }
     }
     
-    // Method 3: If still no JSON, create a fallback response
+    // Method 3: If still no JSON, create a structured response from the text
     if (!parsed) {
-      log.push(`Could not extract JSON from response, using fallback`);
-      return {
-        recommendation: text || "Could not generate recommendation due to parsing error.",
-        alternative: "Please try again with a different request.",
-        harmonyScore: 50,
-        vibeAnalysis: "Unable to parse AI response properly."
+      log.push(`Could not extract JSON, creating structured response from text`);
+      
+      // Try to extract meaningful parts from the text
+      const lines = text.split('\n').filter(line => line.trim());
+      const recommendation = lines.find(line => line.includes('🎵') || line.includes('🎬') || line.includes('🍽️') || line.includes('✈️') || line.includes('📚') || line.includes('📺')) || lines[0] || "Specific recommendation based on your group's interests and data-driven insights.";
+      
+      const whyThisWorks = lines.find(line => line.toLowerCase().includes('why') || line.toLowerCase().includes('works') || line.toLowerCase().includes('because')) || "This recommendation combines your group's diverse interests with data-driven suggestions to create a shared experience everyone will enjoy.";
+      
+      const alternative = lines.find(line => line.toLowerCase().includes('alternative') || line.toLowerCase().includes('also') || line.toLowerCase().includes('try')) || "Consider exploring similar genres or themes together as a group.";
+      
+      parsed = {
+        recommendation,
+        whyThisWorks,
+        alternative,
+        harmonyScore: 75
       };
     }
     
-    // Extract values with fallbacks
-    const recommendation = parsed.recommendation || "No recommendation generated.";
-    const alternative = parsed.alternative || "No alternative suggestion provided.";
-    const harmonyScore = typeof parsed.harmonyScore === 'number' ? parsed.harmonyScore : 50;
-    const vibeAnalysis = parsed.whyThisWorks || parsed.vibeAnalysis || "Analysis not available.";
+    // Extract values with proper fallbacks
+    const recommendation = parsed.recommendation || "Based on your group's interests and data-driven insights, I recommend exploring shared cultural experiences together.";
+    const alternative = parsed.alternative || "Consider trying something completely new that none of you have experienced before.";
+    const harmonyScore = typeof parsed.harmonyScore === 'number' ? Math.max(0, Math.min(100, parsed.harmonyScore)) : 75;
+    const vibeAnalysis = parsed.whyThisWorks || parsed.vibeAnalysis || "This recommendation is tailored to your group's unique combination of interests and preferences, enhanced by data-driven insights.";
     
     log.push(`Successfully parsed: recommendation='${recommendation.substring(0, 50)}...', harmonyScore=${harmonyScore}`);
     
@@ -500,10 +748,10 @@ Respond with JSON:
   } catch (error) {
     log.push(`Gemini API error: ${error.message}`);
     return {
-      recommendation: "Sorry, I couldn't generate a recommendation right now. Please try again.",
-      alternative: "Please try a different request.",
-      harmonyScore: 0,
-      vibeAnalysis: "Error communicating with AI service."
+      recommendation: "I'm having trouble generating a recommendation right now. Please try again with a different request.",
+      alternative: "Consider manually exploring your group's shared interests together.",
+      harmonyScore: 50,
+      vibeAnalysis: "Unable to process your request at this time. Please try again."
     };
   }
 }
@@ -587,7 +835,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // --- Multi-category recommendation (EXTREME FAST MODE) ---
+    // --- Multi-category recommendation (ENHANCED) ---
     if (Array.isArray(categories) && categories.length > 0) {
       try {
         const memberIds = await getGroupMemberIds(groupId);
@@ -604,25 +852,12 @@ export default async function handler(req, res) {
           return;
         }
         
-        // EXTREME FAST MODE: Instant responses for common scenarios
+        // Enhanced multi-category logic
         const geminiType = categories.length === 1 ? 
           Object.keys(RECOMMENDATION_TYPE_TO_ENTITY).find(k => RECOMMENDATION_TYPE_TO_ENTITY[k] === categories[0]) || 'multi-category' 
           : 'multi-category';
         
-        // Try instant response first, fallback to Gemini if needed
-        const instantResponse = getInstantRecommendation(users, categories, geminiType);
-        if (instantResponse) {
-          res.json({
-            groupId,
-            categories,
-            gemini: instantResponse,
-            debugLog: log,
-            mode: 'instant'
-          });
-          return;
-        }
-        
-        // Fallback to ultra-fast Gemini
+        // Always use AI-generated responses for better quality
         const gemini = await getGeminiResponseUltraFast(users, categories, geminiType, log);
         
         res.json({
@@ -630,7 +865,7 @@ export default async function handler(req, res) {
           categories,
           gemini,
           debugLog: log,
-          mode: 'gemini'
+          mode: 'enhanced-ai'
         });
         return;
       } catch (err) {

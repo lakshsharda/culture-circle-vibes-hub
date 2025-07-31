@@ -328,7 +328,17 @@ const Recommendations = () => {
       }
 
       const data = await res.json();
-      const { recommendation, alternative, harmonyScore, vibeAnalysis } = data.gemini;
+      console.log("API Response:", data);
+      
+      // Enhanced error handling for missing fields
+      const { recommendation, alternative, harmonyScore, vibeAnalysis } = data.gemini || {};
+      
+      if (!recommendation) {
+        console.error("Missing recommendation in API response:", data);
+        toast({ title: "API Error", description: "Invalid response format from recommendation service.", variant: "destructive" });
+        setIsGenerating(false);
+        return;
+      }
 
       const aiContent = `**✨ Here's a vibe for your group! ✨**
 
@@ -340,10 +350,10 @@ ${alternative || "No alternative suggestion was generated."}
 
 ---
 
-**Harmony Score: ${harmonyScore}/100**
+**Harmony Score: ${harmonyScore || 75}/100**
 
 **Vibe Analysis:**
-${vibeAnalysis}`;
+${vibeAnalysis || "This recommendation is tailored to your group's unique interests and preferences."}`;
 
       const aiResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
